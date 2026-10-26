@@ -54,6 +54,11 @@ busco2summary:
   highest-scoring full_table copy; miniprot CDS rebuilt from the genome: 1,292/1,293 translate exactly
   to the BUSCO protein (the one exception is flagged in the manifest).
 
+* gene matrices cross-validated against other tools (`benchmark/matrix_benchmark.py`, results in
+  `benchmark/README.md` §4): busco2summary, busco_2_matrix v0.3 and BUSCO_phylogenomics give gene
+  sets, records and sequences identical to an independently computed truth on D1 and D2
+  (S and SF, 50 % / 90 % / ≥ 3 taxa; up to 107,975 records per matrix, 0 differences).
+
 ## 4. Not covered — say so if you use these
 
 * **BUSCO v3, v4.x, v5.0–5.5 and 6.1**: no real runs available; supported from the source-code format

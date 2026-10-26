@@ -172,7 +172,7 @@ b2s_out/
 |---|---|---|---|
 | **本工具** | 由集合决定：S / SD / SF / SDF，可加片段长度过滤 | 多个阈值一次输出，⌈t × N⌉ 整数规则，另有 ≥ K 样品 | 完整度门槛、删空样品、贪心删样建议 |
 | 旧脚本 `busco_2_matrix_v0.3.py` | 有对应**序列文件**即存在；模式 S、F、SF；**D 从不计入** | 基因覆盖度 = 有序列的样品比例 ≥ 阈值（GPS，`-gpt`）；扫描 50–100 %（步长 5 %），用"基因数 × 平均完整度"的 Pareto 前沿推荐阈值 | 样品完整度 ≥ 阈值（SCH，`-sct`） |
-| ZF `BUSCO_extraction.sh`（主版本，BUSCO v5 分支） | single_copy + fragmented 序列（**S+F**） | 先按类群数过滤（代码与 `TOTAL_TAXA − 2` 比较）；比对后在 `matrix_generation.sh` 中用 PhyKIT 计算的比对占比 `≥ OCCUPANCY %` 筛选 | 无 |
+| ZF `BUSCO_extraction.sh`（主版本，BUSCO v5 分支） | single_copy + fragmented 序列（**S+F**） | 先保留 ≥ 3 个类群有序列的位点（脚本统计每个位点的缺失记录数，缺失 < 总类群数 − 2 即保留）；且只认有 `.fna` 的位点；比对后在 `matrix_generation.sh` 中用 PhyKIT 计算的比对占比 `≥ OCCUPANCY %` 筛选 | 无 |
 | ZF `version2/`、BUSCO v3 分支 | 仅 single_copy（S） | 同上 | 无 |
 | BUSCO_phylogenomics `count_buscos.py` | 仅 S | 统计每个基因出现的样品数 | 无 |
 

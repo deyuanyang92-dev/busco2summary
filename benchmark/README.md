@@ -64,9 +64,48 @@ count_buscos.py stops with `FileNotFoundError` as soon as one sample has no
   exactly to the BUSCO protein, 1 is flagged `translation_differs` (BUSCO trimmed that hit);
   over the whole miniprot output of one genome, 184,190/184,190 alignments rebuild exactly.
 
-Not yet run (the sandbox blocked executing freshly downloaded code; to be run after approval):
-`busco2fasta.py`, ZF `BUSCO_extraction.sh`, `extract-busco-scores.py`. Their rows in the feature
-table come from reading their source code.
+### 4. Gene matrix cross-validation (`matrix_benchmark.py`)
+
+Every tool turns the BUSCO folder into one FASTA file per selected BUSCO (one record per sample).
+Truth is computed by the benchmark script itself from the raw `full_table.tsv` and
+`busco_sequences/` (no tool code imported). Each output is scored on
+
+* **gene set**: against busco2summary's rule (present in ≥ ⌈t·N⌉ samples) *and* against the rule the
+  tool documents (`count/N ≥ t`, `round(N·t)`, ≥ 3 taxa), which separates "different rule" from
+  "wrong implementation";
+* **records**: every (gene, sample) record has the right status, no expected record is missing;
+* **sequences**: each record is identical to that sample's BUSCO protein (`*` ignored);
+* **inputs**: md5 of every input file before and after all runs.
+
+Alignment / trimming / tree programs are replaced by pass-through stubs, so only selection and
+extraction are timed. Input: D1 = 199 annelid genome runs (192 non-empty, BUSCO 6.0.0 miniprot),
+D2 = 77 runs (BUSCO 5.8.2, metazoa_odb12); 672 BUSCOs.
+
+| data | set | t | genes (truth) | records | busco2summary 1.1.0 | busco_2_matrix v0.3 | BUSCO_phylogenomics 20240919 |
+|---|---|---|---|---|---|---|---|
+| D1 | S | 50 % | 660 | 96,383 | exact · 38.8 s | exact · 16.5 s | exact · 12.1 s¹ |
+| D1 | S | 90 % | 0 | 0 | exact | exact | exact |
+| D1 | SF | 50 % | 667 | 107,640 | exact · 40.9 s | exact · 17.2 s | (S only) |
+| D1 | SF | 90 % | 4 | 726 | exact | exact | (S only) |
+| D1 | S / SF | ≥ 3 taxa | 672 / 672 | 97,221 / 107,975 | exact / exact | – | – |
+| D2 | S | 50 % | 415 | 19,393 | exact · 9.6 s | exact · 5.5 s | exact · 4.7 s¹ |
+| D2 | S | 90 % | 0 | 0 | exact | exact | exact |
+| D2 | SF | 50 % | 652 | 40,560 | exact · 16.3 s | exact · 7.2 s | (S only) |
+| D2 | SF | 90 % | 171 | 12,342 | exact · 7.4 s | exact · 5.7 s | (S only) |
+| D2 | S / SF | ≥ 3 taxa | 672 / 672 | 27,150 / 41,216 | exact / exact | – | – |
+
+"exact" = gene set equal to truth under both rules, 0 wrong-status records, 0 missing records,
+0 sequence differences. Input files unchanged in every run. busco2summary writes more per run
+(manifest, nucleotide CDS rebuilt for miniprot runs, reports), hence the longer time.
+¹ exits 1 after writing the sequences: with stub "alignments" (unaligned) its PHYLIP writer
+fails; with the real MUSCLE the same D1 run did not finish in 4 h (ISSUES #32).
+
+At these N the rule difference (ceil vs float vs round) never changed a gene set; it can at
+other N (e.g. N = 77, t = 0.5: ceil and float need 39, `round(38.5)` = 38).
+
+Still to run (the sandbox does not let the agent execute freshly cloned code; the user runs
+`run_external.sh`): `busco2fasta.py`, bigey `busco-phylo.py`, ZF `BUSCO_extraction.sh` (main and
+version2). Their feature-table rows come from reading their source code.
 
 
 ## Feature comparison
@@ -102,9 +141,11 @@ University; commit 04838a1; two versions, see note below), `extract-busco-scores
 `single_copy_busco_sequences/` and `fragmented_busco_sequences/` and moves the fragmented files into the
 single-copy folder, i.e. it uses **S + F** (our `SF` set). `scripts/version2/BUSCO_extraction.sh`
 (2023-10-11 ZF) copies only `single_copy_busco_sequences/` (S only), and the BUSCO v3 branch of both uses
-S only. Loci filter in both: the comment says "Filter loci having too few taxa (less than three)", the
-code copies a locus to `2-loci_filter/` when its taxon count is `-lt TOTAL_TAXA - 2`; the occupancy
-cut proper is applied later in `matrix_generation.sh` (`$4 >= OCCUPANCY`).
+S only. A locus is collected for a species only when its `.fna` file exists (so BUSCO runs without
+`.fna`, e.g. miniprot, give no loci). Loci filter in both: `grep -o "^$LOCI" 1-raw_loci/log.txt` counts
+the *missing* records ("<locus> in <species> does not exist") and a locus is kept when missing
+`-lt TOTAL_TAXA - 2`, i.e. present in ≥ 3 taxa, as the comment says. The occupancy cut proper is
+applied later in `matrix_generation.sh` (`$4 >= OCCUPANCY` on PhyKIT alignment occupancy).
 
 ## Reproduce
 
@@ -113,4 +154,7 @@ cut proper is applied later in `matrix_generation.sh` (`$4 >= OCCUPANCY`).
 python3 benchmark/run_benchmark.py --dataset D1=/path/busco_dir@metazoa_odb12 \
     --work /tmp/bench --out results --tools-json tools.json
 python3 benchmark/robustness.py tools.json results/robustness.tsv
+# gene-matrix cross-validation (bench.json: work dir, datasets, tool paths, stub_dir)
+python3 benchmark/matrix_benchmark.py run   --config bench.json
+python3 benchmark/matrix_benchmark.py score --config bench.json --out results
 ```

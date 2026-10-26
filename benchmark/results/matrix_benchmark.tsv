@@ -1,0 +1,25 @@
+dataset	tool	set	threshold	exit	wall_s	max_rss_mb	genes_out	genes_truth	vs_truth	own_rule	genes_own_rule	vs_own_rule	records	records_right_status	records_wrong_status	records_missing	seq_identical	seq_different	headers_unresolved	headers_duplicated
+D1	busco2summary 1.1.0	S	50%	0	38.8	190.0	660	660	exact	ceil	660	exact	96383	96383	0	0	96383	0	0	0
+D1	busco_2_matrix v0.3 (legacy)	S	50%	0	16.48	181.0	660	660	exact	float	660	exact	96383	96383	0	0	96383	0	0	0
+D1	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	50%	1	12.1	249.6	660	660	exact	float	660	exact	96383	96383	0	0	96383	0	0	0
+D1	busco2summary 1.1.0	S	90%	0	10.24	63.0	0	0	exact	ceil	0	exact	0	0	0	0	0	0	0	0
+D1	busco_2_matrix v0.3 (legacy)	S	90%	0	13.4	166.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0
+D1	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	90%	0	3.26	132.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0
+D1	busco2summary 1.1.0	S	min3	0	42.64	184.0	672	672	exact	ceil	672	exact	97221	97221	0	0	97221	0	0	0
+D1	busco2summary 1.1.0	SF	50%	0	40.92	215.0	667	667	exact	ceil	667	exact	107640	107640	0	0	107640	0	0	0
+D1	busco_2_matrix v0.3 (legacy)	SF	50%	0	17.24	182.0	667	667	exact	float	667	exact	107640	107640	0	0	107640	0	0	0
+D1	busco2summary 1.1.0	SF	90%	0	9.9	62.0	4	4	exact	ceil	4	exact	726	726	0	0	726	0	0	0
+D1	busco_2_matrix v0.3 (legacy)	SF	90%	0	13.66	165.0	4	4	exact	float	4	exact	726	726	0	0	726	0	0	0
+D1	busco2summary 1.1.0	SF	min3	0	47.07	211.0	672	672	exact	ceil	672	exact	107975	107975	0	0	107975	0	0	0
+D2	busco2summary 1.1.0	S	50%	0	9.59	49.0	415	415	exact	ceil	415	exact	19393	19393	0	0	19393	0	0	0
+D2	busco_2_matrix v0.3 (legacy)	S	50%	0	5.48	99.0	415	415	exact	float	415	exact	19393	19393	0	0	19393	0	0	0
+D2	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	50%	1	4.73	90.0	415	415	exact	float	415	exact	19393	19393	0	0	19393	0	0	0
+D2	busco2summary 1.1.0	S	90%	0	4.11	31.0	0	0	exact	ceil	0	exact	0	0	0	0	0	0	0	0
+D2	busco_2_matrix v0.3 (legacy)	S	90%	0	4.59	94.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0
+D2	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	90%	0	0.89	67.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0
+D2	busco2summary 1.1.0	S	min3	0	15.17	73.0	672	672	exact	ceil	672	exact	27150	27150	0	0	27150	0	0	0
+D2	busco2summary 1.1.0	SF	50%	0	16.34	89.0	652	652	exact	ceil	652	exact	40560	40560	0	0	40560	0	0	0
+D2	busco_2_matrix v0.3 (legacy)	SF	50%	0	7.24	101.0	652	652	exact	float	652	exact	40560	40560	0	0	40560	0	0	0
+D2	busco2summary 1.1.0	SF	90%	0	7.37	49.0	171	171	exact	ceil	171	exact	12342	12342	0	0	12342	0	0	0
+D2	busco_2_matrix v0.3 (legacy)	SF	90%	0	5.67	96.0	171	171	exact	float	171	exact	12342	12342	0	0	12342	0	0	0
+D2	busco2summary 1.1.0	SF	min3	0	18.88	88.0	672	672	exact	ceil	672	exact	41216	41216	0	0	41216	0	0	0
