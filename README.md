@@ -11,8 +11,9 @@ YZZ Team · De-Yuan Yang · MIT License · Python ≥ 3.8，无必需依赖（ma
 
 ## 为什么要这个工具
 
-大多数 BUSCO 系统发育流程（BUSCO_phylogenomics、busco2phylo-nf、ZF `BUSCO_extraction.sh` 等）
-只用 **完整单拷贝 (S)**，片段化 (F) 直接丢弃。在真实数据中这会损失大量位点：
+大多数 BUSCO 系统发育流程（BUSCO_phylogenomics、busco2phylo-nf 等）只用 **完整单拷贝 (S)**，
+片段化 (F) 直接丢弃。ZF（张峰课题组）`BUSCO_extraction.sh` 主版本的 BUSCO v5 分支是少数例外：
+它把 F 序列并入单拷贝，即用 **S + F**（本工具的 `SF` 集合）；其 `version2/` 与 BUSCO v3 分支只用 S。在真实数据中这会损失大量位点：
 
 | 数据（真实） | 占有率阈值 | 仅 S | S + F | 任意命中 S+D+F |
 |---|---|---|---|---|
@@ -39,7 +40,7 @@ busco2summary 把 F（以及转录组里大量的 D）作为一等信息来统�
   完整拷贝和片段的中位长度、片段比例中位数、D 平均拷贝数，标记 F_PRONE / D_PRONE / F_RESCUED_50。
 * **逐样品统计** `sample_stats.tsv`：基于 full_table 的计数、S+F 完整度排名、片段平均比例。
 * **基因 ID 列表** `gene_lists/`：任意占有率阈值（默认 50 60 70 75 80 85 90 95 100 %）× 四种状态集合，
-  外加 `≥ K 个类群`（ZF 流程的 ≥3 规则）。阈值规则为整数精确规则：`出现样品数 ≥ ceil(t × N)`。
+  外加 `≥ K 个类群`（`--min-taxa`，默认 3）。阈值规则为整数精确规则：`出现样品数 ≥ ceil(t × N)`。
   另有 样品完整度 × 基因占有率网格（`grid_*.tsv`）和贪心删样建议（`taxon_drop_*.tsv`：删哪个样品能换回多少基因）。
 * **`--min-frag-ratio R`**：只把长度 ≥ R × 参考长度的 F 计为存在（参考长度默认是同一 BUSCO 在本数据集中完整拷贝的中位长度）。
 * **序列提取**：按基因 / 按样品输出 FASTA；D 或多条记录时选 full_table 得分最高（`best`）/ 最长 / 第一条；

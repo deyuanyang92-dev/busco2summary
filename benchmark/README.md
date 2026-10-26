@@ -80,8 +80,8 @@ From the source code / documentation of each tool (✓ yes, ~ partial, ✗ no).
 | full_table vs summary consistency check, QC flags | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | gene × sample status matrix (S/D/F/M, incl. all-missing BUSCOs) | ✓ | ~ | S Y/N | ✗ | ✗ | ✗ | ✗ | ✗ |
 | per-gene n_S n_D n_F n_M, occupancy per status set | ✓ | ~ | S only | ✗ | ✗ | ✗ | ✗ | ✗ |
-| fragmented BUSCOs used (S+F sets) and fragment length ratio | ✓ | ~ (no ratio) | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| occupancy gene-ID lists, many thresholds in one run | ✓ (exact ceil rule) | ~ (via extraction) | counts only | one threshold, `round()` | ≥ 3 taxa only | ✗ | ✗ | ✗ |
+| fragmented BUSCOs used (S+F sets) and fragment length ratio | ✓ | ~ (no ratio) | ✗ | ✗ | ~ S+F (F merged into S, no length ratio) in main `scripts/` BUSCO v5 branch; S only in `version2/` and v3 branch | ✗ | ✗ | ✗ |
+| occupancy gene-ID lists, many thresholds in one run | ✓ (exact ceil rule) | ~ (via extraction) | counts only | one threshold, `round()` | one fixed cut (see note) | ✗ | ✗ | ✗ |
 | completeness × occupancy grid, taxon-drop advice | ✓ | ~ (Pareto on one axis) | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | duplicated BUSCOs: best-scoring copy | ✓ | ✗ (excluded) | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | nucleotide CDS for miniprot runs (no `.fna`) | ✓ (verified) | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -93,9 +93,18 @@ From the source code / documentation of each tool (✓ yes, ~ partial, ✗ no).
 
 Third-party tools compared: BUSCO_phylogenomics `count_buscos.py` (bioconda 20240919,
 J. McGowan), `busco2fasta.py` from lstevens17/busco2phylo-nf (commit 2308a1c),
-`BUSCO_extraction.sh` version2 from xtmtd/Phylogenomics (Feng Zhang lab, Nanjing Agricultural
-University; commit 04838a1), `extract-busco-scores.py` from bigey/BUSCO-phylogenetics-pipeline
+`BUSCO_extraction.sh` from xtmtd/Phylogenomics (Feng Zhang lab, Nanjing Agricultural
+University; commit 04838a1; two versions, see note below), `extract-busco-scores.py` from bigey/BUSCO-phylogenetics-pipeline
 (commit eeb3f12), MultiQC 1.21 busco module; plus our own earlier scripts in `legacy/`.
+
+**Note on ZF `BUSCO_extraction.sh`** (read from the source, commit 04838a1). The main
+`scripts/BUSCO_extraction.sh` (2021 ZF, 2023-06-28 DSY), BUSCO v5 branch, copies both
+`single_copy_busco_sequences/` and `fragmented_busco_sequences/` and moves the fragmented files into the
+single-copy folder, i.e. it uses **S + F** (our `SF` set). `scripts/version2/BUSCO_extraction.sh`
+(2023-10-11 ZF) copies only `single_copy_busco_sequences/` (S only), and the BUSCO v3 branch of both uses
+S only. Loci filter in both: the comment says "Filter loci having too few taxa (less than three)", the
+code copies a locus to `2-loci_filter/` when its taxon count is `-lt TOTAL_TAXA - 2`; the occupancy
+cut proper is applied later in `matrix_generation.sh` (`$4 >= OCCUPANCY`).
 
 ## Reproduce
 

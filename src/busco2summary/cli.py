@@ -127,7 +127,7 @@ def build_parser() -> argparse.ArgumentParser:
         g.add_argument("--sets", nargs="+", default=["S", "SD", "SF", "SDF"],
                        choices=["S", "SD", "SF", "SDF"], help="status sets for gene lists")
         g.add_argument("--min-taxa", nargs="*", type=int, default=[3],
-                       help="also list BUSCOs present in >= K samples (ZF pipeline rule: 3)")
+                       help="also list BUSCOs present in >= K samples")
         g.add_argument("--drop-steps", type=int, default=10,
                        help="greedy taxon-drop steps reported (0 = off)")
         if name == "run":
