@@ -1,0 +1,10 @@
+name: busco2summary
+channels: [conda-forge, bioconda]
+dependencies:
+  - python>=3.8
+  - matplotlib>=3.3   # optional: static plots
+  - openpyxl>=3.0     # optional: --xlsx
+  - pytest            # optional: tests
+  - pip
+  - pip:
+      - -e .

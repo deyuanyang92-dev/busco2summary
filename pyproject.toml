@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "busco2summary"
+dynamic = ["version"]
+description = "Detailed multi-sample BUSCO post-processing: summaries, S/D/F/M matrices, per-gene fragmented/duplicated statistics, occupancy gene-ID lists, sequence extraction and an interactive HTML report."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [{name = "De-Yuan Yang (YZZ Team)"}]
+keywords = ["BUSCO", "compleasm", "genome completeness", "phylogenomics", "orthologs", "bioinformatics"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+]
+dependencies = []
+
+[project.optional-dependencies]
+plots = ["matplotlib>=3.3"]
+xlsx = ["openpyxl>=3.0"]
+all = ["matplotlib>=3.3", "openpyxl>=3.0"]
+test = ["pytest>=6"]
+
+[project.scripts]
+busco2summary = "busco2summary.cli:main"
+b2s = "busco2summary.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/deyuanyang92-dev/busco2summary"
+
+[tool.setuptools.dynamic]
+version = {attr = "busco2summary.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

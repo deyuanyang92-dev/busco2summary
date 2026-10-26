@@ -1,0 +1,24 @@
+# Minimal Snakemake usage of busco2summary (no alignment / tree steps).
+# snakemake -s workflow/Snakefile --config busco_dir=busco_results out=b2s_out -c 8
+BUSCO_DIR = config.get("busco_dir", "busco_results")
+OUT = config.get("out", "b2s_out")
+THRESHOLDS = config.get("thresholds", "50 60 70 80 90")
+
+rule all:
+    input:
+        f"{OUT}/busco_summary.tsv",
+        f"{OUT}/gene_lists/occupancy_summary.tsv",
+        f"{OUT}/busco2summary_report.html",
+
+rule busco2summary:
+    input:
+        BUSCO_DIR
+    output:
+        f"{OUT}/busco_summary.tsv",
+        f"{OUT}/gene_lists/occupancy_summary.tsv",
+        f"{OUT}/busco2summary_report.html",
+    threads: 8
+    log:
+        f"{OUT}/snakemake_busco2summary.log"
+    shell:
+        "busco2summary run -i {input} -o {OUT} -j {threads} -t {THRESHOLDS} -q 2> {log}"

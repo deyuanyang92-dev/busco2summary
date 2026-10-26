@@ -1,0 +1,13 @@
+dataset	n_samples	tool	exit	wall_s	max_rss_mb	per_sample_counts	S_occ50	S_occ90	S_min3	SF_occ90
+D1_annelida_v6	199	busco2summary	0	18.77	365.0	199/199 correct	660 (exact)	0 (exact)	672 (exact)	4 (exact)
+D1_annelida_v6	199	busco2summary (resume)	0	2.74	56.0	n/a	n/a	n/a	n/a	n/a
+D1_annelida_v6	199	busco_2_matrix v0.3	0	24.75	233.6	199/199 correct	660 (exact)	0 (exact)	672 (exact)	4 (exact)
+D1_annelida_v6	199	count_buscos.py	0	1.12	18.0	199/199 correct	660 (exact)	0 (exact)	672 (exact)	n/a
+D1_annelida_v6	199	busco2summary_smkv2 (summary)	0	0.1	14.8	199/199 correct	n/a	n/a	n/a	n/a
+D1_annelida_v6	199	MultiQC busco	0	29.18	320.4	196/199 correct	n/a	n/a	n/a	n/a
+D2_mixed_v5	77	busco2summary	0	8.19	197.6	77/77 correct	415 (exact)	0 (exact)	672 (exact)	171 (exact)
+D2_mixed_v5	77	busco2summary (resume)	0	1.17	34.0	n/a	n/a	n/a	n/a	n/a
+D2_mixed_v5	77	busco_2_matrix v0.3	0	9.91	154.8	77/77 correct	415 (exact)	0 (exact)	672 (exact)	171 (exact)
+D2_mixed_v5	77	count_buscos.py	0	0.43	13.0	77/77 correct	415 (exact)	0 (exact)	672 (exact)	n/a
+D2_mixed_v5	77	busco2summary_smkv2 (summary)	0	0.11	14.8	77/77 correct	n/a	n/a	n/a	n/a
+D2_mixed_v5	77	MultiQC busco	0	13.77	173.2	77/77 correct	n/a	n/a	n/a	n/a

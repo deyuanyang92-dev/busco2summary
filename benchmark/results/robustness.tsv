@@ -1,0 +1,6 @@
+tool	exit	BUSCO v5 genome	BUSCO 6 miniprot, dir *.fna	transcriptome table	BUSCO v3 (nested)	auto-lineage (2 runs)	empty sample	no full_table	compleasm	correct
+busco2summary	0	correct	correct	correct	correct	correct	correct	correct	correct	8/8
+busco_2_matrix v0.3	0	correct	correct	correct	not reported	correct	correct	correct	not reported	6/8
+count_buscos.py	1	not reported	not reported	not reported	not reported	not reported	not reported	not reported	not reported	0/8
+busco2summary_smkv2 (summary)	0	correct	correct	correct	not reported	wrong (1 vs 3)	correct	correct	not reported	5/8
+MultiQC busco	0	not reported	not reported	correct	correct	correct	correct	correct	not reported	5/8
