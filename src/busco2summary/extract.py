@@ -362,7 +362,7 @@ def extract(samples: Sequence[Sample], genes: Sequence[str], out_dir: Path,
                     man.append([g, s.name, "nucleotide", st, "no_fna_no_genome", str(gff), ""])
             else:
                 qnames = {}
-                for g, st, loc, gff in need_gff:
+                for g, st, _loc, _gff in need_gff:
                     pf = d_for(st) / f"{g}.faa"
                     if pf.is_file():
                         recs = list(parsers.read_fasta(pf))
@@ -373,11 +373,11 @@ def extract(samples: Sequence[Sample], genes: Sequence[str], out_dir: Path,
                 paf = miniprot_paf(Path(s.run_dir), {q[0] for q in qnames.values()})
                 models = {g: _gff_models(gff) for g, _, _, gff in need_gff}
                 picks = {g: _closest_model(models[g], loc or (qnames.get(g) or (None, None, None))[1])
-                         for g, _, loc, _ in need_gff}
+                         for g, _st, loc, _gff in need_gff}
                 wanted = {m[0][0] for m in picks.values() if m}
                 wanted |= {q[1][0] for q in qnames.values() if q[1]}
                 contigs = load_contigs(Path(str(genome)), wanted)
-                for g, st, loc, gff in need_gff:
+                for g, st, _loc, gff in need_gff:
                     seq, how, hdr = None, "", ""
                     q = qnames.get(g)
                     if q and q[1] and q[1][0] in contigs:
@@ -413,7 +413,7 @@ def extract(samples: Sequence[Sample], genes: Sequence[str], out_dir: Path,
         results = list(ex.map(per_sample, samples))
 
     manifest: List[dict] = []
-    for s, res, man in results:
+    for _s, _res, man in results:
         for r in man:
             manifest.append(dict(zip(["busco_id", "sample", "seq_type", "status", "result",
                                       "source", "length"], r)))

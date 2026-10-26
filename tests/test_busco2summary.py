@@ -1,7 +1,6 @@
 import csv
 import json
 import math
-from pathlib import Path
 
 import pytest
 
@@ -97,7 +96,7 @@ def test_occupancy_exact_rule(data):
     # F rescues loci: SF list is a superset of S
     assert set(lists["S_occ050"]) <= set(lists["SF_occ050"])
     gs = {r["busco_id"]: r for r in analysis.gene_stats(ds)}
-    for g, r in gs.items():
+    for r in gs.values():
         assert r["n_S"] + r["n_D"] + r["n_F"] + r["n_M"] == n
 
 

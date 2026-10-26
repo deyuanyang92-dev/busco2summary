@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from . import parsers
-from .log import info, warn
+from .log import warn
 
 SEQ_DIRS = {
     "S": "single_copy_busco_sequences",

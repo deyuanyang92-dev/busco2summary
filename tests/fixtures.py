@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 GENES = [f"{i}at33208" for i in (101, 102, 103, 104, 105, 106)]
 PROT = "MKTAYIAKQRQISFVKSHFSRQ"

@@ -195,7 +195,8 @@ class QCThresholds:
     max_e: float = 0.50     # HIGH_E (internal stop codons, BUSCO >= 5.8) above
 
 
-def sample_stats(ds: Dataset, qc: QCThresholds = QCThresholds()) -> List[dict]:
+def sample_stats(ds: Dataset, qc: Optional[QCThresholds] = None) -> List[dict]:
+    qc = qc or QCThresholds()
     rows = []
     ng = len(ds.genes) or 1
     for j, s in enumerate(ds.samples):
