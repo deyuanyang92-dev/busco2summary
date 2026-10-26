@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Tuple
 
 # full_table "Status" words -> status code.  compleasm uses Single /
-# Interspersed; BUSCO v3-v6 use Complete / Duplicated / Fragmented / Missing.
+# Interspaced / Retrocopy; BUSCO v3-v6 use Complete / Duplicated / Fragmented / Missing.
 STATUS_WORDS: Dict[str, str] = {
     "complete": "S",
     "single": "S",
@@ -24,6 +24,8 @@ STATUS_WORDS: Dict[str, str] = {
     "multi": "D",
     "fragmented": "F",
     "interspersed": "F",   # compleasm "I": counted as fragmented
+    "interspaced": "F",    # compleasm >= 0.2 spelling
+    "retrocopy": "D",      # compleasm folds R into D unless --retrocopy
     "incomplete": "F",
     "missing": "M",
 }
@@ -115,7 +117,9 @@ def parse_short_summary_txt(path: Path) -> Dict[str, object]:
             r["pct_E"] = float(m.group(7))
     for pat, key in _SUMMARY_COUNT_PATTERNS:
         mm = re.search(pat, txt, re.M | re.I)
-        if mm:
+        if mm and not (key == "n_total" and "n_total" in r):
+            # n from the one-line summary is the denominator BUSCO uses; since
+            # 5.3.0 "Total BUSCO groups searched" comes from dataset.cfg instead
             r[key] = int(mm.group(1))
     m = re.search(r"of which (\d+) contain internal stop codons", txt)
     if m:
@@ -221,15 +225,23 @@ def parse_short_summary_json(path: Path) -> Dict[str, object]:
 # compleasm summary.txt
 # --------------------------------------------------------------------------
 
-def parse_compleasm_summary(path: Path) -> Dict[str, object]:
-    """Parse compleasm ``summary.txt`` (``S:93.33%, 237`` lines)."""
+def parse_compleasm_summary(path: Path, lineage: str = "") -> Dict[str, object]:
+    """Parse compleasm ``summary.txt`` (``S:93.33%, 237`` lines).
+
+    compleasm appends one ``## lineage: X`` block per lineage; the block for
+    ``lineage`` is used (the first block when not given or not found).
+    """
     r: Dict[str, object] = {"tool": "compleasm"}
     txt = Path(path).read_text(encoding="utf-8", errors="replace")
+    blocks = re.split(r"(?m)^(?=##\s*lineage:)", txt)
+    blocks = [b for b in blocks if re.search(r"lineage:", b)] or [txt]
+    txt = next((b for b in blocks if lineage and re.search(r"lineage:\s*%s\b" % re.escape(lineage), b)),
+               blocks[0])
     m = re.search(r"lineage:\s*(\S+)", txt)
     if m:
         r["lineage"] = m.group(1)
     vals = {}
-    for code in ("S", "D", "F", "I", "M"):
+    for code in ("S", "D", "R", "F", "I", "M"):
         mm = re.search(r"^\s*%s:\s*([\d.]+)%%\s*,\s*(\d+)" % code, txt, re.M)
         if mm:
             vals[code] = (float(mm.group(1)), int(mm.group(2)))
@@ -239,6 +251,8 @@ def parse_compleasm_summary(path: Path) -> Dict[str, object]:
     if vals:
         s = vals.get("S", (0.0, 0))
         dd = vals.get("D", (0.0, 0))
+        if "R" in vals:   # --retrocopy: R reported apart from D; full_table maps it to D
+            dd = (dd[0] + vals["R"][0], dd[1] + vals["R"][1])
         f = vals.get("F", (0.0, 0))
         i = vals.get("I", (0.0, 0))
         mi = vals.get("M", (0.0, 0))

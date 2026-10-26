@@ -117,7 +117,7 @@ def test_taxon_drop_and_grid(data):
     ds = analysis.build_dataset(samples, "metazoa_odb12")
     drop = analysis.taxon_drop(ds, "S", [0.9], steps=2)
     assert drop[0]["n_taxa"] == ds.n and drop[1]["n_taxa"] == ds.n - 1
-    assert drop[1]["genes_occ90"] >= drop[0]["genes_occ90"]
+    assert drop[1]["genes_occ090"] >= drop[0]["genes_occ090"]
     g = analysis.grid(ds, "SF", [0, 0.5], [0.5])
     assert g[0]["n_taxa"] >= g[1]["n_taxa"]
 

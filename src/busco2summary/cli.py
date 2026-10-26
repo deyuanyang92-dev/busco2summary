@@ -79,7 +79,8 @@ def add_filter_args(p: argparse.ArgumentParser) -> None:
     g.add_argument("--keep-empty", action="store_true",
                    help="keep samples with no BUSCO at all in matrices (default: drop)")
     g.add_argument("--min-completeness", type=float, default=0.0, metavar="PCT",
-                   help="drop samples whose S+D+F %% is below PCT from matrices/lists")
+                   help="drop samples whose S+D+F %% is below PCT from matrices/lists "
+                        "(values <= 1 are fractions, as for -t)")
     g.add_argument("--min-frag-ratio", type=float, default=0.0, metavar="R",
                    help="count a fragmented BUSCO as present only if its length >= R x reference "
                         "length (0 = every F counts; e.g. 0.5)")
@@ -266,12 +267,13 @@ def _dataset(args, lineage: str, group: List[Sample]) -> Optional[analysis.Datas
         if s.state == "EMPTY" and not args.keep_empty:
             warn(f"dropping EMPTY sample {s.name} from matrices (use --keep-empty to keep)")
             continue
-        if args.min_completeness > 0 and s.calls:
+        mc = args.min_completeness * 100 if 0 < args.min_completeness <= 1 else args.min_completeness
+        if mc > 0 and s.calls:
             n = s.counts()
             tot = sum(n.values()) or 1
-            if 100 * (tot - n["M"]) / tot < args.min_completeness:
+            if 100 * (tot - n["M"]) / tot < mc:
                 warn(f"dropping {s.name}: S+D+F {100 * (tot - n['M']) / tot:.1f}% "
-                     f"< --min-completeness {args.min_completeness}")
+                     f"< --min-completeness {mc:g}%")
                 continue
         if not s.calls:
             warn(f"{s.name}: no per-BUSCO table, not in matrices")
@@ -298,7 +300,7 @@ def _write_lists(args, ds: analysis.Dataset, out: Path) -> List[dict]:
     for t in th:
         r = {"occupancy": t, "min_samples": analysis.need(t, ds.n)}
         for k in args.sets:
-            r[k] = len(lists[f"{k}_occ{int(round(t * 100)):03d}"])
+            r[k] = len(lists[f"{k}_{analysis.occ_key(t)}"])
         if "S" in args.sets and "SF" in args.sets:
             r["F_gain(SF-S)"] = r["SF"] - r["S"]
         wide.append(r)
@@ -362,12 +364,21 @@ def _genome_map(path: Optional[str]) -> Optional[Dict[str, str]]:
 def _do_extract(args, ds: analysis.Dataset, genes: List[str], sset: str, out: Path) -> None:
     from . import extract as ex
     statuses = sset.replace("D", "") if args.dup == "skip" else sset
+    short_f: Dict[str, set] = {}
+    if ds.min_frag_ratio > 0:
+        for g in genes:
+            if g not in ds.rows:
+                continue
+            for j, ok in enumerate(ds.present_mask(g, "F")):
+                if ds.rows[g][j] == "F" and not ok:
+                    short_f.setdefault(ds.samples[j].name, set()).add(g)
     man = ex.extract(ds.samples, genes, out, statuses=statuses, seqtype=args.seqtype,
                      dup_policy="best" if args.dup == "skip" else args.dup, layout=args.layout,
                      header=args.header, sample_header=args.sample_header, stop=args.stop,
                      min_len=args.min_len, line_width=args.line_width,
                      genome_map=_genome_map(args.genome_map),
-                     genome_from_summary=args.genome_from_summary, threads=args.threads)
+                     genome_from_summary=args.genome_from_summary, threads=args.threads,
+                     short_f=short_f)
     c = Counter(r["result"].split("_of_")[0] for r in man if r["result"] not in ("missing", "not_selected"))
     info(f"extraction {out.name}: " + ", ".join(f"{k}={v}" for k, v in c.most_common()))
     write_list(out / "busco_ids.txt", genes)
@@ -480,7 +491,7 @@ def cmd_extract(args) -> int:
         else:
             t = _thresholds([args.occupancy])[0]
             _, lists = analysis.occupancy_lists(ds, [t], [args.set])
-            tag = f"{args.set}_occ{int(round(t * 100)):03d}"
+            tag = f"{args.set}_{analysis.occ_key(t)}"
             genes = lists[tag]
         info(f"{lineage}: extracting {len(genes)} BUSCOs ({tag})")
         out = (root / lineage if len(groups) > 1 else root) / tag

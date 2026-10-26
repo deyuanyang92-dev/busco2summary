@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
-from . import parsers
+from . import __version__, parsers
 from .log import warn
 
 SEQ_DIRS = {
@@ -37,7 +37,7 @@ SKIP_DIRS = {"busco_downloads", "logs", "tmp", "hmmer_output", "busco_sequences"
 GENERIC_LINEAGES = {"eukaryota", "bacteria", "archaea", "viruses"}
 FASTA_EXT = (".gz", ".fna", ".fasta", ".fa", ".fas", ".faa", ".fsa", ".ffn",
              ".pep", ".cds", ".scaffolds", ".contigs", ".txt")
-CACHE_VERSION = 3
+CACHE_VERSION = 4
 
 
 @dataclass
@@ -70,6 +70,11 @@ class Sample:
         n = {"S": 0, "D": 0, "F": 0, "M": 0}
         for c in self.calls.values():
             n[c[0]] += 1
+        # without a full_table the calls come from sequence folders and miss
+        # the M BUSCOs: complete the denominator from the summary's n
+        tot = self.info.get("n_total")
+        if isinstance(tot, int) and tot > len(self.calls):
+            n["M"] += tot - len(self.calls)
         return n
 
     def to_json(self) -> dict:
@@ -155,12 +160,18 @@ def classify(d: Path) -> Optional[Candidate]:
         if d.name.startswith("run_") and "_odb" in d.name:
             # a run folder given directly; sample = parent
             return Candidate(d.parent.name, d.parent, [d], "run_only")
+        if not d.name.startswith("run_") and re.search(r"_odb\d+$", d.name):
+            # compleasm OUT/<lineage>_odbNN/ without OUT/summary.txt
+            return Candidate(d.parent.name, d.parent, [d], "compleasm")
         if (d / "single_copy_busco_sequences").is_dir() or _has(d, "full_table_*.tsv"):
             return Candidate(d.name, d, [d], "busco_v3")
         return Candidate(d.name, d, [d], "run_only")
     runs = _run_children(d)
     if runs:
-        if (d / "summary.txt").is_file() and not any(r.name.startswith("run_") for r in runs):
+        if not any(r.name.startswith("run_") for r in runs) and (
+                (d / "summary.txt").is_file()
+                or any(re.search(r"_odb\d+$", r.name) for r in runs)):
+            # compleasm: OUT/<lineage>_odbNN/full_table*.tsv (summary.txt optional)
             return Candidate(d.name, d, runs, "compleasm")
         # v4+ run folders are named run_<lineage>_odbNN; a folder whose run_*
         # children are BUSCO v3 sample folders (run_<sample>) is a container
@@ -222,8 +233,15 @@ def lineage_match(want: str, have: str) -> bool:
     return w == h or (("_odb" not in w) and norm(w) == norm(h))
 
 
+def _odb(run: Path) -> int:
+    m = re.search(r"_odb(\d+)$", _lineage_of_run(run))
+    return int(m.group(1)) if m else -1
+
+
 def choose_run(c: Candidate, lineage: str = "") -> Tuple[Optional[Path], List[Path]]:
-    runs = c.runs
+    """Pick one run per sample. Ties (e.g. metazoa_odb10 and metazoa_odb12 both
+    matching ``-l metazoa``) go to the newest odb version."""
+    runs = sorted(c.runs, key=lambda r: -_odb(r))
     if len(runs) == 1:
         if lineage and c.layout == "busco_v4+" and not lineage_match(lineage, _lineage_of_run(runs[0])):
             return None, runs
@@ -239,7 +257,7 @@ def choose_run(c: Candidate, lineage: str = "") -> Tuple[Optional[Path], List[Pa
         parts = f.name.split(".")
         if len(parts) > 2:
             named += [r for r in runs if _lineage_of_run(r) == parts[2] and r not in named]
-    named.sort(key=lambda r: re.sub(r"_odb\d+$", "", _lineage_of_run(r)) in GENERIC_LINEAGES)
+    named.sort(key=lambda r: (re.sub(r"_odb\d+$", "", _lineage_of_run(r)) in GENERIC_LINEAGES, -_odb(r)))
     if named:
         return named[0], [x for x in runs if x is not named[0]]
     specific = [r for r in runs
@@ -331,7 +349,8 @@ def load_sample(c: Candidate, name: str, lineage: str = "",
     js, tx = _summary_files(c, run)
     ft = _full_table(run)
     base = _seq_base(run)
-    sig_paths = [js, tx, ft] + ([base / d for d in SEQ_DIRS.values()] if base else [])
+    sig_paths = ([js, tx, ft] + ([base / d for d in SEQ_DIRS.values()] if base else [])
+                 + sorted(run.glob("missing_busco_list*.tsv")) + [c.path / "summary.txt"])
     sig = _signature(sig_paths)
     cache_file = None
     if cache_dir is not None:
@@ -339,7 +358,7 @@ def load_sample(c: Candidate, name: str, lineage: str = "",
         if cache_file.is_file():
             try:
                 d = json.loads(cache_file.read_text())
-                if d.get("sig") == sig and d.get("v") == CACHE_VERSION:
+                if d.get("sig") == sig and d.get("v") == CACHE_VERSION and d.get("pkg") == __version__:
                     cached = Sample.from_json(d["sample"])
                     cached.name, cached.dir_name = name, c.dir_name
                     return cached
@@ -349,7 +368,7 @@ def load_sample(c: Candidate, name: str, lineage: str = "",
     if c.layout == "compleasm":
         s.tool = "compleasm"
         if (c.path / "summary.txt").is_file():
-            s.info.update(parsers.parse_compleasm_summary(c.path / "summary.txt"))
+            s.info.update(parsers.parse_compleasm_summary(c.path / "summary.txt", run.name))
         s.info.setdefault("lineage", run.name)
     try:
         if tx:
@@ -390,7 +409,7 @@ def load_sample(c: Candidate, name: str, lineage: str = "",
     _qc(s)
     if cache_file is not None:
         try:
-            cache_file.write_text(json.dumps({"v": CACHE_VERSION, "sig": sig,
+            cache_file.write_text(json.dumps({"v": CACHE_VERSION, "pkg": __version__, "sig": sig,
                                               "sample": s.to_json()}))
         except OSError:
             pass
@@ -535,9 +554,15 @@ def load_all(inputs: Sequence[str], sample_sheet: Optional[str] = None,
     if not cands:
         return []
 
-    names: Dict[str, int] = {}
+    used: set = set()
+    seen_paths: set = set()
     jobs = []
     for c in cands:
+        rp = os.path.realpath(c.path)
+        if rp in seen_paths:
+            warn(f"{c.path} listed more than once; using it once")
+            continue
+        seen_paths.add(rp)
         nm = rename.get(str(c.path)) or make_name(c.dir_name, name_style, replace_dots)
         if replace_dots and str(c.path) in rename:
             nm = nm.replace(".", "_")
@@ -545,13 +570,13 @@ def load_all(inputs: Sequence[str], sample_sheet: Optional[str] = None,
             continue
         if exclude and (nm in exclude or c.dir_name in exclude):
             continue
-        if nm in names:
-            names[nm] += 1
-            new = f"{nm}_{names[nm]}"
-            warn(f"duplicate sample name '{nm}' ({c.path}); renamed to '{new}'")
-            nm = new
-        else:
-            names[nm] = 1
+        if nm in used:
+            k = 2
+            while f"{nm}_{k}" in used:
+                k += 1
+            warn(f"duplicate sample name '{nm}' ({c.path}); renamed to '{nm}_{k}'")
+            nm = f"{nm}_{k}"
+        used.add(nm)
         jobs.append((c, nm, lin_of.get(str(c.path), lineage)))
 
     if cache_dir is not None:

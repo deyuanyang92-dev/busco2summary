@@ -304,8 +304,14 @@ def extract(samples: Sequence[Sample], genes: Sequence[str], out_dir: Path,
             layout: str = "gene", header: str = "{sample}", sample_header: str = "{gene}",
             stop: str = "strip", min_len: int = 0, line_width: int = 0,
             genome_map: Optional[Dict[str, str]] = None, genome_from_summary: bool = False,
-            threads: int = 4) -> List[dict]:
-    """Extract sequences; returns manifest rows (also written to disk)."""
+            threads: int = 4, short_f: Optional[Dict[str, set]] = None) -> List[dict]:
+    """Extract sequences; returns manifest rows (also written to disk).
+
+    ``short_f``: sample name -> BUSCO IDs whose F call fails --min-frag-ratio;
+    these are not extracted, so each locus holds exactly the samples counted as
+    present when the gene list was built.
+    """
+    short_f = short_f or {}
     out_dir.mkdir(parents=True, exist_ok=True)
     kinds = ["protein", "nucleotide"] if seqtype == "both" else [seqtype]
     gene_set = list(dict.fromkeys(genes))
@@ -321,6 +327,9 @@ def extract(samples: Sequence[Sample], genes: Sequence[str], out_dir: Path,
             st = s.status(g)
             if st not in statuses or st == "M":
                 man.append([g, s.name, "", st, "not_selected" if st != "M" else "missing", "", ""])
+                continue
+            if st == "F" and g in short_f.get(s.name, ()):
+                man.append([g, s.name, "", st, "F_below_min_frag_ratio", "", ""])
                 continue
             if base is None:
                 man.append([g, s.name, "", st, "no_sequence_folder", "", ""])

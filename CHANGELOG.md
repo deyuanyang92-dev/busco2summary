@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.1.0 (2026-10-27)
+Logic audit for use in publications (independent code review + BUSCO source survey + real-data check).
+See `docs/VALIDATION.md` and `docs/ISSUES.md` #19-#30.
+
+Fixes that can change reported numbers
+* sample without full_table: M = n - S - D - F (was 0, so C was 100 %)
+* `--min-frag-ratio`: an F without a reference length no longer counts as present; the same rule now
+  drives gene lists, binary matrices, `occ_*`, `n_F_qualified`, new `pct_SF_qualified` and extraction
+* unique sample names in all cases; a sample listed twice in a sample sheet is used once
+* several runs per sample matching `-l`: newest odb version chosen
+* parse cache invalidated by `missing_busco_list*.tsv`, compleasm `summary.txt` and package updates
+* compleasm 0.2.x: `Interspaced` -> F, `Retrocopy` -> D, per-lineage `summary.txt` block, folders without `summary.txt`
+* denominator `n` from the one-line summary (BUSCO's own), not `Total BUSCO groups searched`
+
+Other
+* list names never collide (`occ066p60`); `--min-completeness` accepts fractions like `-t`
+* taxon-drop columns renamed `genes_occNNN` (same naming as the gene lists)
+* README: how genes are organised (sample completeness vs gene occupancy vs matrix fill, rules, comparison)
+* docs/BUSCO_FORMATS.md: output formats of BUSCO 3.0.2-6.1.0 and compleasm from their source code
+* corrected description of ZF `BUSCO_extraction.sh` (main version uses S+F)
+
 ## 1.0.0 (2026-10-26)
 First release of the consolidated package. Replaces and supersedes:
 

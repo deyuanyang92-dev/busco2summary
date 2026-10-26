@@ -68,9 +68,11 @@ class Dataset:
         out = []
         for j, c in enumerate(row):
             ok = c in sset
-            if ok and c == "F" and self.min_frag_ratio > 0 and fr is not None:
-                r = fr[j]
-                ok = r is None or r >= self.min_frag_ratio
+            if ok and c == "F" and self.min_frag_ratio > 0:
+                # an F call qualifies only with a known ratio >= threshold
+                # (no reference length -> cannot be shown to be long enough)
+                r = fr[j] if fr is not None else None
+                ok = r is not None and r >= self.min_frag_ratio
             out.append(ok)
         return out
 
@@ -120,6 +122,14 @@ def build_dataset(samples: Sequence[Sample], lineage: str,
     return ds
 
 
+def occ_key(t: float) -> str:
+    """List name for threshold t: 0.9 -> occ090, 0.666 -> occ066p60 (never collides)."""
+    v = t * 100
+    if abs(v - round(v)) < 1e-6:
+        return f"occ{int(round(v)):03d}"
+    return f"occ{v:06.2f}".replace(".", "p")
+
+
 # --------------------------------------------------------------------------
 # per-gene statistics
 # --------------------------------------------------------------------------
@@ -149,7 +159,7 @@ def gene_stats(ds: Dataset, high_f: float = 0.3, high_d: float = 0.2) -> List[di
             if call[0] == "D":
                 dcopies.append(call[1])
         fr = [r for r in ds.frag_ratio.get(g, []) if r is not None]
-        nq = sum(1 for r in fr if r >= ds.min_frag_ratio) if ds.min_frag_ratio > 0 else c["F"]
+        nq = ds.present_count(g, "F")
         occ = {k: ds.present_count(g, k) / n for k in SETS}
         flags = []
         if c["F"] / n >= high_f:
@@ -183,7 +193,7 @@ def gene_stats(ds: Dataset, high_f: float = 0.3, high_d: float = 0.2) -> List[di
 
 SAMPLE_FIELDS = ["sample", "state", "n_genes", "S", "D", "F", "M",
                  "pct_S", "pct_D", "pct_C", "pct_F", "pct_M", "pct_SF", "pct_SDF",
-                 "mean_F_ratio", "n_F_qualified", "rank_SF", "qc_flags"]
+                 "mean_F_ratio", "n_F_qualified", "pct_SF_qualified", "rank_SF", "qc_flags"]
 
 
 @dataclass
@@ -199,12 +209,12 @@ def sample_stats(ds: Dataset, qc: Optional[QCThresholds] = None) -> List[dict]:
     qc = qc or QCThresholds()
     rows = []
     ng = len(ds.genes) or 1
+    fmask = {g: ds.present_mask(g, "F") for g in ds.genes}  # qualified F calls
     for j, s in enumerate(ds.samples):
         col = [ds.rows[g][j] for g in ds.genes]
         c = {k: col.count(k) for k in "SDFM"}
         frs = [ds.frag_ratio[g][j] for g in ds.genes if ds.frag_ratio[g][j] is not None]
-        nq = (sum(1 for r in frs if r >= ds.min_frag_ratio)
-              if ds.min_frag_ratio > 0 else c["F"])
+        nq = sum(1 for g in ds.genes if fmask[g][j])
         flags = []
         if s.state != "OK":
             flags.append(s.state)
@@ -229,9 +239,10 @@ def sample_stats(ds: Dataset, qc: Optional[QCThresholds] = None) -> List[dict]:
             "pct_F": c["F"] / ng, "pct_M": c["M"] / ng,
             "pct_SF": (c["S"] + c["F"]) / ng, "pct_SDF": (ng - c["M"]) / ng,
             "mean_F_ratio": (sum(frs) / len(frs)) if frs else None,
-            "n_F_qualified": nq, "rank_SF": 0, "qc_flags": ",".join(flags),
+            "n_F_qualified": nq, "pct_SF_qualified": (c["S"] + nq) / ng,
+            "rank_SF": 0, "qc_flags": ",".join(flags),
         })
-    order = sorted(range(len(rows)), key=lambda i: -rows[i]["pct_SF"])
+    order = sorted(range(len(rows)), key=lambda i: -rows[i]["pct_SF_qualified"])
     for r, i in enumerate(order, 1):
         rows[i]["rank_SF"] = r
     return rows
@@ -263,7 +274,7 @@ def occupancy_lists(ds: Dataset, thresholds: Sequence[float],
         nmin = need(t, n)
         for k in sets:
             keep = [g for g in ds.genes if counts[k][g] >= nmin and counts[k][g] > 0]
-            lists[f"{k}_occ{int(round(t * 100)):03d}"] = keep
+            lists[f"{k}_{occ_key(t)}"] = keep
             table.append(row_for(nmin, "occupancy", t, k, keep))
     for m in min_taxa:
         for k in sets:
@@ -353,7 +364,7 @@ def taxon_drop(ds: Dataset, sset: str, thresholds: Sequence[float],
     out = []
     n = len(active)
     out.append({"step": 0, "dropped": "", "sample_completeness": "", "n_taxa": n,
-                **{f"genes_occ{int(round(t * 100))}": passing(cnt, n, t) for t in thresholds}})
+                **{f"genes_{occ_key(t)}": passing(cnt, n, t) for t in thresholds}})
     t0 = thresholds[0]
     for step in range(1, steps + 1):
         if n <= 3:
@@ -376,5 +387,5 @@ def taxon_drop(ds: Dataset, sset: str, thresholds: Sequence[float],
         n -= 1
         out.append({"step": step, "dropped": ds.samples[best].name,
                     "sample_completeness": round(comp[best], 4), "n_taxa": n,
-                    **{f"genes_occ{int(round(t * 100))}": passing(cnt, n, t) for t in thresholds}})
+                    **{f"genes_{occ_key(t)}": passing(cnt, n, t) for t in thresholds}})
     return out
