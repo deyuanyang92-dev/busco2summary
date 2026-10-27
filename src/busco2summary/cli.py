@@ -1,5 +1,6 @@
 """Command line interface.
 
+busco2summary matrix   -i BUSCO_DIR > m.tsv     # one matrix only, no output folder
 busco2summary run      -i BUSCO_DIR -o OUT      # everything (summary, matrices, lists, plots, HTML)
 busco2summary scan     -i BUSCO_DIR -o OUT      # discovery only: what is where
 busco2summary summary  -i BUSCO_DIR -o OUT      # per-sample summary table only
@@ -26,6 +27,9 @@ from .writers import write_list, write_matrix, write_table, write_xlsx
 
 EPILOG = """
 examples:
+  busco2summary matrix -i busco_results/ > status_matrix.tsv
+  busco2summary matrix -i busco_results/ --set SF -t 50 --format binary -o SF_occ50.tsv
+  busco2summary matrix -i busco_results/ --genes my_ids.txt --format ids > present_ids.tsv
   busco2summary run -i busco_results/ -o b2s_out -j 16
   busco2summary run -i runA/ runB/ --sample-sheet samples.tsv --lineage metazoa_odb12 -o out
   busco2summary genelists -i busco_results/ -o out -t 50 60 70 80 90 --sets S SF
@@ -154,6 +158,27 @@ def build_parser() -> argparse.ArgumentParser:
                                 "(no value = S_occ050 and SF_occ050)")
             _extract_opts(x)
 
+    sp = sub.add_parser("matrix", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                        help="one gene x sample matrix to stdout or a file (no output folder, "
+                             "no cache, no plots)",
+                        description="Write one matrix and nothing else. Rows = BUSCOs, columns = samples "
+                                    "(--samples-as-rows to flip). Messages go to stderr.")
+    add_input_args(sp)
+    add_filter_args(sp)
+    g = sp.add_argument_group("matrix")
+    g.add_argument("-o", "--output", default="-", help="output file ('-' = stdout; '.gz' = gzipped)")
+    g.add_argument("--format", choices=["status", "binary", "count", "ids"], default="status",
+                   help="status: S/D/F/M letters | binary: 1 = present in --set | count: copy number "
+                        "| ids: long table sample<TAB>busco_id<TAB>status, present calls only")
+    g.add_argument("--set", default="SDF", choices=["S", "SD", "SF", "SDF"],
+                   help="statuses counted as present (binary, ids, occupancy filter)")
+    g.add_argument("-t", "--occupancy", type=float, default=0.0,
+                   help="keep BUSCOs present in >= ceil(t*N) samples (%% or fraction; 0 = all)")
+    g.add_argument("--min-taxa", type=int, default=0, help="keep BUSCOs present in >= K samples")
+    g.add_argument("--genes", metavar="FILE", help="only these BUSCO IDs (one per line)")
+    g.add_argument("--samples-as-rows", action="store_true", help="samples as rows, BUSCOs as columns")
+    g.add_argument("-q", "--quiet", action="store_true")
+
     sp = mk("extract", "extract per-gene / per-sample FASTA for a BUSCO list")
     add_filter_args(sp)
     g = sp.add_argument_group("which BUSCOs")
@@ -190,16 +215,18 @@ def _extract_opts(g) -> None:
 # --------------------------------------------------------------------------
 
 def _load(args) -> List[Sample]:
-    out = Path(args.outdir)
-    out.mkdir(parents=True, exist_ok=True)
+    outdir = getattr(args, "outdir", None)          # 'matrix' has no output folder
+    out = Path(outdir) if outdir else None
+    if out:
+        out.mkdir(parents=True, exist_ok=True)
     log.QUIET = getattr(args, "quiet", False)
-    log.set_logfile(out / "busco2summary.log")
+    log.set_logfile(out / "busco2summary.log" if out else None)
     info(f"busco2summary {__version__}  command: {' '.join(sys.argv)}")
     if not args.input and not args.sample_sheet:
         error("give -i/--input and/or -s/--sample-sheet")
         sys.exit(2)
     lineage = "" if args.lineage in ("", "all") else args.lineage
-    cache = None if args.no_cache else out / ".cache"
+    cache = None if args.no_cache or out is None else out / ".cache"
     t0 = time.time()
     samples = load_all(args.input, args.sample_sheet, lineage, args.name_style, args.replace_dots,
                        _read_set(args.include), _read_set(args.exclude), args.threads,
@@ -476,6 +503,72 @@ def cmd_run(args, lists_only: bool = False) -> int:
     return 0
 
 
+def cmd_matrix(args) -> int:
+    samples = _load(args)
+    if args.lineage == "all":
+        error("matrix: one lineage at a time (give --lineage NAME)")
+        return 2
+    groups = _lineages(samples, args.lineage)
+    if not groups:
+        error("no usable samples")
+        return 1
+    lineage, group = next(iter(groups.items()))
+    ds = _dataset(args, lineage, group)
+    if ds is None:
+        return 1
+    genes = ds.genes
+    if args.genes:
+        want = _read_set(args.genes) or set()
+        unknown = want - set(ds.rows)
+        if unknown:
+            warn(f"--genes: {len(unknown)} IDs not in {lineage} (e.g. {sorted(unknown)[0]})")
+        genes = [g for g in genes if g in want]
+    k = max(args.min_taxa, analysis.need(_thresholds([args.occupancy])[0], ds.n) if args.occupancy else 0)
+    if k:
+        genes = [g for g in genes if ds.present_count(g, args.set) >= k]
+    info(f"{lineage}: {ds.n} samples x {len(genes)} BUSCOs"
+         + (f" (present as {args.set} in >= {k} samples)" if k else ""))
+    masks = {g: ds.present_mask(g, args.set) for g in genes} if args.format in ("binary", "ids") else {}
+
+    def cell(i, j):
+        g = genes[i]
+        if args.format == "status":
+            return ds.rows[g][j]
+        if args.format == "binary":
+            return 1 if masks[g][j] else 0
+        return (ds.samples[j].calls.get(g) or [0, 0])[1]
+
+    import csv
+    import gzip
+    if args.output == "-":
+        fh = sys.stdout
+    else:
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+        fh = (gzip.open if args.output.endswith(".gz") else open)(args.output, "wt", newline="")
+    try:
+        w = csv.writer(fh, delimiter="\t", lineterminator="\n")
+        names = ds.names
+        if args.format == "ids":
+            w.writerow(["sample", "busco_id", "status"])
+            for j, name in enumerate(names):
+                for g in genes:
+                    if masks[g][j]:
+                        w.writerow([name, g, ds.rows[g][j]])
+        elif args.samples_as_rows:
+            w.writerow(["sample"] + genes)
+            for j, name in enumerate(names):
+                w.writerow([name] + [cell(i, j) for i in range(len(genes))])
+        else:
+            w.writerow(["busco_id"] + names)
+            for i, g in enumerate(genes):
+                w.writerow([g] + [cell(i, j) for j in range(len(names))])
+    finally:
+        if fh is not sys.stdout:
+            fh.close()
+            info(f"matrix -> {args.output}")
+    return 0
+
+
 def cmd_extract(args) -> int:
     samples = _load(args)
     root = Path(args.outdir)
@@ -516,6 +609,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             return cmd_run(args, lists_only=True)
         if args.cmd == "extract":
             return cmd_extract(args)
+        if args.cmd == "matrix":
+            return cmd_matrix(args)
+    except BrokenPipeError:            # e.g. `b2s matrix ... | head`
+        return 0
     except KeyboardInterrupt:
         error("interrupted")
         return 130

@@ -16,7 +16,11 @@ SET_COLORS = {"S": "#2a78d6", "SD": "#6250d6", "SF": "#eb6834", "SDF": "#1baf7a"
 INK, MUTED, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 
 
+_WARNED = False
+
+
 def _mpl():
+    global _WARNED
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -27,7 +31,9 @@ def _mpl():
                              "pdf.fonttype": 42, "svg.fonttype": "none"})
         return plt
     except ImportError:
-        warn("matplotlib not installed: skipping plots (pip install matplotlib)")
+        if not _WARNED:
+            warn("matplotlib not installed: skipping plots (pip install matplotlib)")
+            _WARNED = True
         return None
 
 
@@ -163,6 +169,8 @@ def fragment_plot(ds: Dataset, out: Path, formats=("png", "pdf")) -> List[Path]:
 
 def all_plots(ds: Dataset, sample_rows: List[dict], out: Path, thresholds,
               formats=("png", "pdf"), heatmap: bool = True) -> List[Path]:
+    if _mpl() is None:
+        return []
     out.mkdir(parents=True, exist_ok=True)
     paths = []
     paths += busco_bars(ds, sample_rows, out, formats)

@@ -5,7 +5,39 @@
 that treat fragmented BUSCOs as signal, occupancy-based gene-ID lists, sequence extraction and an
 interactive HTML report.* (English section below.)
 
-YZZ Team · De-Yuan Yang · MIT License · Python ≥ 3.8，无必需依赖（matplotlib / openpyxl 可选）
+**作者：De-Yuan Yang（杨德援），YZZ Team** —— 思路、整理规则（S / S+F、占有率、重视 F 片段）、测试数据与验证方案均由作者提出。
+MIT License · Python ≥ 3.8，无必需依赖（matplotlib / openpyxl 可选）；单文件免安装版 `b2s.pyz`
+
+**目录**：[核心逻辑](#核心逻辑基因-id-是怎么整理出来的) · [安装](#安装三选一) · [只想要矩阵](#只想要矩阵matrix) ·
+[快速开始](#快速开始) · [输出](#输出) · [判定规则](#整理逻辑原理速查) · [与其他软件对比](#与其他软件的对比benchmark) · [English](#english)
+
+---
+
+## 核心逻辑：基因 ID 是怎么整理出来的
+
+就是"先汇总所有基因 ID 并去重，再逐个样品填状态"，代码在
+[`analysis.py` 的 `build_dataset`](src/busco2summary/analysis.py) 和 [`parsers.py` 的 `parse_full_table`](src/busco2summary/parsers.py)：
+
+1. **逐个样品读 `full_table.tsv`**（BUSCO 3–6、compleasm 都支持），得到 `{BUSCO ID: 状态}`。
+   同一 ID 可能有多行（重复拷贝、多个 miniprot 命中），**按 ID 合并成一个状态**，优先级 S > D > F > M。
+   只有缺少 full_table 时，才退而遍历 `busco_sequences/` 的文件名（S/D/F）+ `missing_busco_list.tsv`（M），并在样品状态中标记 `NO_FULL_TABLE`。
+   （ZF `BUSCO_extraction.sh`、旧脚本 v0.3 只遍历序列文件名：拿不到 M，也看不到没有序列文件的命中，如 BUSCO 6 miniprot 没有 `.fna`。）
+2. **汇总所有样品的 BUSCO ID，去重、排序**，作为矩阵的行：`genes = sorted({g for s in samples for g in s.calls})`。
+   BUSCO 的 full_table 本来就列出该谱系的全部 BUSCO（含 Missing），所以通常就是整套谱系基因（metazoa_odb12 = 672）。
+3. **再逐个样品填格子**：样品里有这个 ID → 填它的状态 S/D/F/M；没有这个 ID（例如 full_table 不完整）→ 填 M。
+   得到 **基因 × 样品** 状态矩阵（`status_matrix.tsv`）。
+4. **按状态集合把格子变成 有/无**：`S` 只认单拷贝；`SF` 认单拷贝 + 片段；`SD`、`SDF` 同理（→ `binary_*.tsv`）。
+5. **逐行数"有"的样品数**，≥ ⌈t × N⌉（或 ≥ K 个类群）就把该基因 ID 写入列表（`gene_lists/SF/SF_occ090.txt` 等），
+   再按这个列表从 `busco_sequences/` 提取序列。
+
+小例子（3 个样品，`SF`，t = 60 % → 需要 ⌈0.6 × 3⌉ = 2 个样品）：
+
+| BUSCO ID | 样品 X | 样品 Y | 样品 Z | SF 有几个 | 入选？ |
+|---|---|---|---|---|---|
+| 100at33208 | S | S | S | 3 | ✔ |
+| 200at33208 | S | F | M | 2 | ✔ |
+| 300at33208 | F | M | M | 1 | ✘ |
+| 400at33208 | D | M | M | 0（D 不属于 SF） | ✘ |
 
 ---
 
@@ -51,15 +83,55 @@ busco2summary 把 F（以及转录组里大量的 D）作为一等信息来统�
 * **稳健与可复现**：单个样品文件损坏不会中断整批；解析缓存可断点续跑；记录日志和全部参数；多线程读取；
   可在 Snakemake 中调用（`workflow/Snakefile`）。
 
-## 安装
+## 安装（三选一）
+
+**① 免安装，只需 python3（≥ 3.8）**：下载一个 46 KB 的文件即可用，不装任何包，不改系统环境。
 
 ```bash
-git clone https://github.com/deyuanyang92-dev/busco2summary.git
-cd busco2summary
-pip install .            # 或: pip install ".[all]"  (matplotlib + openpyxl)
-# conda: conda env create -f environment.yml
-busco2summary --version   # 简写命令: b2s
+curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/latest/download/b2s.pyz
+python3 b2s.pyz matrix -i busco_results/ > status_matrix.tsv
 ```
+
+**② pip 安装**（得到 `busco2summary` / `b2s` 命令；默认零依赖）：
+
+```bash
+pip install git+https://github.com/deyuanyang92-dev/busco2summary.git
+# 需要 PNG/PDF 图和 Excel 时再加：pip install "busco2summary[all] @ git+https://github.com/deyuanyang92-dev/busco2summary.git"
+```
+
+**③ 源码 / conda**：
+
+```bash
+git clone https://github.com/deyuanyang92-dev/busco2summary.git && cd busco2summary
+pip install .            # 或 conda env create -f environment.yml
+```
+
+| 需要什么 | 依赖 | 占用（实测 D2：77 个样品；D1：199 个基因组） |
+|---|---|---|
+| 只要矩阵 / ID 列表（`matrix`） | 仅 Python 标准库 | 1 个文件；内存 32 MB / 58 MB；3 s / 8 s |
+| 完整分析 + HTML 报告（`run`） | 仅标准库 | 内存 35 MB / 65 MB；4 s / 9 s；PNG/PDF 图跳过并提示一次 |
+| 再加 PNG/PDF 图 / Excel | matplotlib / openpyxl | 内存约 380 MB（D2；增加的部分几乎全是 matplotlib） |
+
+## 只想要矩阵：`matrix`
+
+不建输出目录、不写缓存和日志、不画图，只输出一个表（到屏幕或 `-o` 文件，`.gz` 自动压缩）。
+
+```bash
+# 状态矩阵（S/D/F/M），行 = BUSCO，列 = 样品
+b2s matrix -i busco_results/ > status_matrix.tsv
+
+# S+F、占有率 ≥ 50 % 的 0/1 矩阵（与 genelists 的 SF_occ050 完全相同的基因）
+b2s matrix -i busco_results/ --set SF -t 50 --format binary -o SF_occ050.tsv
+
+# 至少 3 个类群有（S），样品作行，拷贝数
+b2s matrix -i busco_results/ --set S --min-taxa 3 --samples-as-rows --format count -o S_min3.tsv
+
+# 给定基因列表，输出每个样品有哪些基因（长表：sample  busco_id  status）
+b2s matrix -i busco_results/ --genes my_ids.txt --format ids > present_ids.tsv
+```
+
+`--format`：`status`（字母）· `binary`（按 `--set` 判定 1/0）· `count`（拷贝数）· `ids`（只列存在的记录）。
+样品过滤参数与 `run` 相同（`--min-completeness`、`--min-frag-ratio`、`--include/--exclude`、`--lineage` 等）。
 
 ## 快速开始
 
@@ -184,17 +256,31 @@ b2s_out/
 [`docs/VALIDATION.md`](docs/VALIDATION.md)：逐版本 BUSCO 输出格式（据源码，[`docs/BUSCO_FORMATS.md`](docs/BUSCO_FORMATS.md)）、
 独立代码审查、3,041 个真实样品逐一复算、72 个基因列表独立复算，以及**尚未覆盖的范围**和可直接用的方法描述。
 
-## 与其他工具的比较 (benchmark)
+## 与其他软件的对比（benchmark）
 
-见 [`benchmark/README.md`](benchmark/README.md)：结果由独立脚本从原始 `full_table.tsv` 计算真值后逐项打分，
-并记录运行时间和内存。
+用 GitHub 上 5 个项目的 6 个脚本和本工具跑**同一份真实数据**，结果与一个独立脚本从原始 `full_table.tsv` /
+`busco_sequences/` 算出的"真值"逐项比对：基因集合、每条记录（基因 × 样品）的状态、每条序列，以及运行前后输入文件 md5。
+数据：D1 = 199 个环节动物基因组（BUSCO 6.0.0 miniprot），D2 = 77 个基因组+转录组（BUSCO 5.8.2）；metazoa_odb12，672 个 BUSCO。
 
-**基因矩阵交叉验证**（`benchmark/matrix_benchmark.py`，详见 benchmark/README §4）：与 5 个项目的 6 个脚本
-（旧脚本 v0.3、BUSCO_phylogenomics、busco2fasta、bigey busco-phylo、ZF BUSCO_extraction.sh 主版本与 version2）
-在 D1（199 个基因组）和 D2（77 个样品）上比较。busco2summary 在全部 12 种设置下与独立真值完全一致
-（基因集合、每条记录的状态、每条序列）。其他工具按各自规则也都正确，但有两点差异要注意：
-busco2fasta 用 `round()`，77 个样品时 "50 %" 只要求 38 个样品，比 ⌈N·t⌉ 多选 21 个基因；
-ZF 只收有 `.fna` 的样品，miniprot 结果（BUSCO 6）全部被静默跳过。
+| 数据 | 集合 | 阈值 | 真值：基因数 | **busco2summary** | 旧脚本 v0.3 | [BUSCO_phylogenomics](https://github.com/jamiemcg/BUSCO_phylogenomics) | [busco2fasta](https://github.com/lstevens17/busco2phylo-nf) | [bigey](https://github.com/bigey/BUSCO-phylogenetics-pipeline) | [ZF](https://github.com/xtmtd/Phylogenomics) version2 | ZF 主版本 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| D1 | S | 50 % | 660 | ✔ 一致 | ✔ | ✔ | ✔ | ✔ | | |
+| D1 | SF | 50 % | 667 | ✔ | ✔ | 不支持 F | 不支持 F | 不支持 F | | |
+| D1 | SF | 90 % | 4 | ✔ | ✔ | | | | | |
+| D1 | S / SF | ≥ 3 类群 | 672 | ✔ | | | | | **0 个基因**（无 .fna，静默跳过） | **0 个基因** |
+| D2 | S | 50 % | 415 | ✔ | ✔ | ✔ | **436（多 21 个）** | ✔ | | |
+| D2 | SF | 50 % / 90 % | 652 / 171 | ✔ | ✔ | | | | | |
+| D2 | S / SF | ≥ 3 类群 | 672 | ✔ | | | | | 只用了 32/77 个样品 | 只用了 32/77 个样品 |
+
+结论：
+
+* **busco2summary 在全部 12 种设置下与真值完全一致**（基因集合、全部记录状态、全部序列），S 与 S+F、任意阈值、≥ K 类群都支持，用到所有样品。
+* 其他软件按各自规则实现都正确，差异来自**规则不同**：busco2fasta 用 `round(N·p)`，77 个样品时 "50 %" = round(38.5) = 38 个样品，比 ⌈N·t⌉ = 39 多选 21 个基因；
+  ZF 只收集有 `.fna` 的样品，BUSCO 6 miniprot 结果没有 `.fna`，被**静默跳过**（退出码 0、无提示）。
+* 34 次运行中没有任何软件改动输入文件。
+
+完整表格（记录数、运行时间、内存、鲁棒性测试）和复现命令见 [`benchmark/README.md`](benchmark/README.md)，
+原始打分结果见 [`benchmark/results/`](benchmark/results/)。
 
 ## 旧脚本
 
@@ -223,8 +309,20 @@ ZF 只收有 `.fna` 的样品，miniprot 结果（BUSCO 6）全部被静默跳�
   verified by translation against the BUSCO protein);
 * an offline interactive HTML report and publication plots.
 
+No required dependencies. Zero-install single file (Python ≥ 3.8 only):
+
 ```bash
-pip install .
+curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/latest/download/b2s.pyz
+python3 b2s.pyz matrix -i busco_results/ > status_matrix.tsv              # just one matrix
+python3 b2s.pyz matrix -i busco_results/ --set SF -t 50 --format binary -o SF_occ050.tsv
+python3 b2s.pyz matrix -i busco_results/ --genes ids.txt --format ids    # which sample has which gene
+```
+
+`matrix` writes one table (stdout or `-o`, `.gz` compressed) and nothing else: no output
+folder, cache, log or plots. Full installation:
+
+```bash
+pip install git+https://github.com/deyuanyang92-dev/busco2summary.git    # add [all] for plots + xlsx
 busco2summary run -i busco_results/ -o b2s_out -j 16
 busco2summary genelists -i busco_results/ -o lists -t 50 60 90 --sets S SF
 busco2summary extract -i busco_results/ -o seqs --set SF --occupancy 90 --seqtype both

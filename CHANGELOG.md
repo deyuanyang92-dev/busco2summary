@@ -1,5 +1,19 @@
 # Changelog
 
+
+## 1.2.0 (2026-10-27)
+
+* new `matrix` command: one gene × sample matrix (status / binary / copy number) or a long
+  `sample busco_id status` table, to stdout or a file; occupancy (`-t`), `--min-taxa`,
+  `--genes` and the usual sample filters; no output folder, cache, log or plots.
+  Same gene selection as `genelists` (tested).
+* single-file zero-install build `b2s.pyz` (`scripts/build_pyz.py`, 46 KB, standard library only),
+  attached to GitHub releases by `.github/workflows/release.yml`.
+* without matplotlib: one warning, no empty `plots/` folder.
+* CI also tests a lean install (no matplotlib / openpyxl) and the `.pyz`.
+* `b2s ... | head` no longer prints a BrokenPipe traceback.
+* benchmark: gene-matrix cross-validation against 6 scripts from 5 projects (`benchmark/README.md` §4).
+
 ## 1.1.0 (2026-10-27)
 Logic audit for use in publications (independent code review + BUSCO source survey + real-data check).
 See `docs/VALIDATION.md` and `docs/ISSUES.md` #19-#30.
