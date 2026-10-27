@@ -1,5 +1,6 @@
 """Command line interface.
 
+busco2summary busco    -i ASSEMBLIES -o OUT -l LINEAGE   # run BUSCO on many assemblies + summary
 busco2summary list     -i BUSCO_DIR > s.txt     # names of all result folders (for --samples)
 busco2summary matrix   -i BUSCO_DIR > m.tsv     # one matrix only, no output folder
 busco2summary run      -i BUSCO_DIR -o OUT      # everything (summary, matrices, lists, plots, HTML)
@@ -19,7 +20,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from . import __version__, analysis, log, parsers
+from . import __version__, analysis, log, parsers, runbusco
 from .analysis import QCThresholds
 from .loader import Sample, load_all
 from .log import error, info, warn
@@ -28,6 +29,8 @@ from .writers import write_list, write_matrix, write_table, write_xlsx
 
 EPILOG = """
 examples:
+  busco2summary busco -i spades_results/ trinity_results/ -o busco_out -l metazoa_odb12 -n   # preview
+  busco2summary busco -i spades_results/ trinity_results/ -o busco_out -l metazoa_odb12 -c 8
   busco2summary list -i busco_results/ > samples.txt          # edit, then:
   busco2summary matrix -i busco_results/ --samples samples.txt > status_matrix.tsv
   busco2summary matrix -i busco_results/ > status_matrix.tsv
@@ -137,6 +140,51 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("-o", "--output", default="-", help="output file ('-' = stdout)")
     sp.add_argument("--long", action="store_true",
                     help="also folder name, layout, lineage run(s) and path (tab-separated)")
+    sp = sub.add_parser("busco", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                        help="run BUSCO on many assemblies (SPAdes/Trinity/MEGAHIT/Flye folders or "
+                             "FASTA files), then summarise",
+                        description="Run BUSCO on every assembly found under -i and write the summary. "
+                                    "Sample = assembly folder name minus the assembler suffix "
+                                    "(JLJC1_Eun1_1201_spades_rna -> JLJC1_Eun1_1201) or the FASTA name "
+                                    "without extension (X_trinity.Trinity.fasta -> X); results go to "
+                                    "OUT/<sample>. Finished samples are skipped, so re-running resumes.")
+    g = sp.add_argument_group("input")
+    g.add_argument("-i", "--input", nargs="+", default=[], metavar="PATH",
+                   help="assembly folder(s) / parent folder(s) / FASTA file(s), searched recursively")
+    g.add_argument("--list", metavar="FILE",
+                   help="assemblies from a file: FASTA | name<TAB>FASTA | name<TAB>mode<TAB>FASTA "
+                        "(busco_inputs.tsv written by -n works as is)")
+    g.add_argument("--fasta", nargs="+", default=runbusco.DEFAULT_FASTA, metavar="NAME",
+                   help="assembly file(s) looked for in each assembler folder, first found is used "
+                        "(e.g. --fasta scaffolds.fasta)")
+    g.add_argument("--suffix", nargs="*", default=runbusco.DEFAULT_SUFFIXES, metavar="SUF",
+                   help="removed from folder/file names to get the sample name; "
+                        "`--suffix` alone keeps names unchanged")
+    g.add_argument("--include", "--samples", metavar="FILE", help="only these samples (one per line)")
+    g.add_argument("--exclude", metavar="FILE", help="skip these samples")
+    g.add_argument("--max-depth", type=int, default=3, help="folder search depth")
+    b = sp.add_argument_group("BUSCO")
+    b.add_argument("-o", "--outdir", required=True, help="BUSCO output folder: OUT/<sample>/")
+    b.add_argument("-l", "--lineage", default="",
+                   help="lineage name (downloaded to OUT/busco_downloads) or a local dataset folder "
+                        "(then --offline)")
+    b.add_argument("-m", "--mode", choices=["auto", "genome", "transcriptome", "proteins"], default="auto",
+                   help="auto: transcriptome for rnaSPAdes/Trinity/*_rna, proteins for .faa/.pep, else genome")
+    b.add_argument("-c", "--cpu", type=int, default=8, help="threads per BUSCO run")
+    b.add_argument("-J", "--jobs", type=int, default=0,
+                   help="BUSCO runs at the same time (0 = 90%% of cores / --cpu)")
+    b.add_argument("--busco", default="", metavar="CMD", help="busco executable (default: PATH, "
+                   "then conda env 'busco')")
+    b.add_argument("--busco-env", default="", metavar="ENV", help="conda env name or prefix holding busco")
+    b.add_argument("--busco-args", default="", metavar="'ARGS'",
+                   help="extra BUSCO options, quoted, with '=' (e.g. --busco-args='--miniprot')")
+    b.add_argument("--restart", action="store_true",
+                   help="unfinished samples: BUSCO --restart instead of -f (start over)")
+    b.add_argument("-n", "--dry-run", action="store_true",
+                   help="only list what would run (writes OUT/busco_inputs.tsv)")
+    b.add_argument("--no-summary", action="store_true", help="do not write busco_summary.tsv afterwards")
+    b.add_argument("-q", "--quiet", action="store_true")
+
     mk("scan", "list discovered BUSCO results (layout, lineage, version, state)")
     sp = mk("summary", "per-sample summary table (counts, percentages, E, assembly stats, QC flags)")
     sp.add_argument("--xlsx", action="store_true", help="also write busco_summary.xlsx")
@@ -458,6 +506,86 @@ def cmd_list(args) -> int:
     return 0
 
 
+def cmd_busco(args) -> int:
+    import shlex
+    out = Path(args.outdir).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    log.QUIET = args.quiet
+    log.set_logfile(out / "busco2summary.log")
+    info(f"busco2summary {__version__}  command: {' '.join(sys.argv)}")
+    if not args.input and not args.list:
+        error("give -i/--input and/or --list")
+        return 2
+    items, notes = runbusco.find_assemblies(args.input, args.fasta, args.suffix, args.max_depth, skip=[out])
+    if args.list:
+        items += runbusco.read_list(args.list, args.suffix)
+    for n in notes:
+        warn(n)
+    inc, exc = _read_set(args.include), _read_set(args.exclude)
+    if inc:
+        miss = inc - {a.name for a in items} - {Path(a.fasta).name for a in items}
+        if miss:
+            warn(f"{len(miss)} name(s) in {args.include} not found: {', '.join(sorted(miss)[:10])}")
+    items = [a for a in items if (not inc or a.name in inc or Path(a.fasta).name in inc)
+             and not (exc and (a.name in exc or Path(a.fasta).name in exc))]
+    if not items:
+        error("no assemblies found (check -i, --fasta, --max-depth)")
+        return 1
+    if args.mode != "auto":
+        for a in items:
+            a.mode = args.mode
+    for m in runbusco.dedupe(items):
+        warn(m)
+    dup = runbusco.plan(items, out)
+    runbusco.write_plan(out / "busco_inputs.tsv", items)
+    todo = [a for a in items if a.status != "done"]
+    modes = Counter(a.mode for a in todo)
+    info(f"{len(items)} assemblies: {len(items) - len(todo)} done, {len(todo)} to run "
+         f"({', '.join(f'{k} {v}' for k, v in modes.items())}) -> {out / 'busco_inputs.tsv'}")
+    if dup:
+        for k, v in dup.items():
+            error(f"sample name '{k}' used by {len(v)} assemblies: {'; '.join(v)}")
+        error("rename them in busco_inputs.tsv and pass it with --list, or change --suffix")
+        return 2
+    extra = shlex.split(args.busco_args)
+    if todo and not args.lineage and "--auto-lineage" not in " ".join(extra):
+        error("give -l/--lineage (name or local dataset folder)")
+        return 2
+    cmd, env = runbusco.resolve_busco(args.busco, args.busco_env)
+    ver = runbusco.busco_version(cmd, env)
+    (error if ver.startswith("ERROR") else info)(f"BUSCO: {cmd[0]}  ({ver})")
+    jobs = args.jobs or runbusco.auto_jobs(args.cpu, len(todo))
+    if args.dry_run:
+        for a in todo:
+            print(" ".join(shlex.quote(c) for c in
+                           runbusco.build_cmd(a, out, cmd, args.lineage, args.cpu, extra, args.restart)))
+        info(f"dry run: {len(todo)} BUSCO runs, {jobs} at a time x {args.cpu} threads")
+        return 0
+    if ver.startswith("ERROR"):
+        return 1
+    failed = []
+    if todo:
+        info(f"running {len(todo)} BUSCO jobs, {jobs} at a time x {args.cpu} threads")
+        res = runbusco.run_all(todo, out, cmd, env, args.lineage, args.cpu, jobs, extra, args.restart)
+        failed = [(a, rc) for a, rc, _ in res if rc != 0]
+        if failed:
+            write_table(out / "busco_failed.tsv",
+                        [{"sample": a.name, "exit": rc, "fasta": a.fasta, "log": f"logs/{a.name}.busco.log"}
+                         for a, rc in failed])
+            warn(f"{len(failed)} BUSCO run(s) failed -> {out / 'busco_failed.tsv'}")
+        elif (out / "busco_failed.tsv").exists():
+            (out / "busco_failed.tsv").unlink()
+    if not args.no_summary:
+        names = out / ".busco_samples.txt"
+        names.write_text("".join(a.name + "\n" for a in items if runbusco.is_done(out, a.name)))
+        rc = main(["summary", "-i", str(out), "-o", str(out), "--samples", str(names), "--max-depth", "2",
+                   "--name-style", "dir"]
+                  + ["-q"] * args.quiet)
+        if rc:
+            return rc
+    return 1 if failed else 0
+
+
 def cmd_scan(args) -> int:
     samples = _load(args)
     out = Path(args.outdir)
@@ -648,6 +776,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         if args.cmd == "list":
             return cmd_list(args)
+        if args.cmd == "busco":
+            return cmd_busco(args)
         if args.cmd == "scan":
             return cmd_scan(args)
         if args.cmd == "summary":

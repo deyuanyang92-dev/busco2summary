@@ -28,6 +28,7 @@ python3 b2s.pyz run -i busco_results/ -o b2s_out                      # 全部�
 
 | 命令 | 做什么 | 主要输出 |
 |---|---|---|
+| `busco` | 对 SPAdes / rnaSPAdes / Trinity / MEGAHIT / Flye 组装结果或 FASTA 批量跑 BUSCO，再汇总 | `OUT/<样品名>/`、`busco_summary.tsv` |
 | `list` | 列出目录里所有 BUSCO 结果的名字（一行一个） | 名单文件，可编辑后用 `--samples` 读入 |
 | `matrix` | 只输出一张矩阵，不建目录、不写缓存 | 一个 TSV（屏幕或 `-o` 文件，`.gz` 自动压缩） |
 | `genelists` | 按占有率输出基因 ID 列表 | `gene_lists/S/S_occ090.txt` 等 |
@@ -48,14 +49,34 @@ b2s run    -i busco_results/ --samples samples.txt -o b2s_out
 名单每行可以是样品名、文件夹名或完整路径；`#` 开头的行忽略；名单里找不到的名字会提示。
 反过来，`--exclude 名单` 去掉这些样品。
 
-**SPAdes 等组装后跑的 BUSCO，直接汇总**：
+**组装完直接批量跑 BUSCO（SPAdes、rnaSPAdes、Trinity、MEGAHIT、Flye）**：
 
 ```bash
-b2s summary -i assemblies/ -o busco_summary_out     # → busco_summary.tsv：每个样品一行 C/S/D/F/M、N50 等
+b2s busco -i Spades_results/ Trinity_results/ -o Busco_results -l metazoa_odb12 -n   # 先预览：样品名、模式、命令
+b2s busco -i Spades_results/ Trinity_results/ -o Busco_results -l metazoa_odb12 -c 8  # 运行，完成后自动汇总
 ```
 
-BUSCO 结果放在每个组装文件夹里、文件夹名都一样时（如 `sampleA/spades/busco_scaffolds/`、`sampleB/spades/busco_scaffolds/`），
-样品名自动取各自不同的上级文件夹（`sampleA`、`sampleB`），不会混成一个名字。
+| 组装结果 | 用哪个文件 | 样品名 | BUSCO 模式 |
+|---|---|---|---|
+| `JLJC1_Eun1_1201_spades_rna/`（rnaSPAdes） | `transcripts.fasta` | `JLJC1_Eun1_1201` | transcriptome |
+| `23002-1_spades_wgs/`（SPAdes） | `contigs.fasta`（`--fasta scaffolds.fasta` 可改） | `23002-1` | genome |
+| `24003-36Z_trinity.Trinity.fasta`（Trinity） | 文件本身 | `24003-36Z` | transcriptome |
+| `X_megahit/`、`X_flye/` | `final.contigs.fa`、`assembly.fasta` | `X` | genome |
+| `X.fasta`、`X.fna`（任意 FASTA） | 文件本身 | `X` | 按名字判断；`.faa`/`.pep` 为 proteins |
+
+- 样品名 = 组装文件夹名去掉组装软件后缀（`_spades_rna`、`_spades_wgs`、`_spades`、`_trinity`、`_megahit` 等），
+  或 FASTA 文件名去掉扩展名，与旧脚本 `busco2summary_smkv2.py -bfsd --suffix_subdir` 相同；
+  `--suffix` 后面不跟值则保留原名。去掉后缀后两个样品重名（如 `M4_spades` 和 `M4_spades_wgs`）时，这两个保留原名并提示。
+- 结果写到 `Busco_results/<样品名>/`，同时写 `busco_inputs.tsv`（样品、模式、FASTA、状态）、
+  `logs/<样品名>.busco.log`，失败的列在 `busco_failed.tsv`；最后自动生成 `busco_summary.tsv`。
+- **断点续跑**：已有 `short_summary` 的样品跳过，只跑没完成的（未完成的文件夹用 `-f` 重跑，`--restart` 则续跑）。
+- 只跑部分样品：`--samples 名单`；也可以把 `busco_inputs.tsv` 改名、改模式后用 `--list` 读回。
+- `-l` 给本地谱系文件夹时自动 `--offline`；`-m` 默认 auto（按上表），也可统一指定。
+- 并行：`-c` 每个 BUSCO 的线程数，`-J` 同时跑几个（默认 = 90 % 核心数 ÷ `-c`）。不需要 Snakemake。
+- BUSCO 位置：默认 PATH 里的 `busco`，找不到就用 conda 环境 `busco`；`--busco-env BUSCO_v5.8.2` 指定环境，
+  不用 `conda activate`。其他 BUSCO 参数：`--busco-args='--miniprot'`。
+
+已经跑完的 BUSCO 只要汇总：`b2s summary -i Busco_results/ -o out`（每个样品一行 C/S/D/F/M、N50 等）。
 
 常用示例：
 
@@ -272,7 +293,7 @@ full_table 每个样品一个文件，明确记录 M；序列文件名拿不到 
 | [`benchmark/README.md`](benchmark/README.md) | 与其他软件对比的完整表格与复现 |
 | [`docs/ISSUES.md`](docs/ISSUES.md) | 问题与修复记录 |
 | [`CHANGELOG.md`](CHANGELOG.md) | 版本更新 |
-| `legacy/` | 旧脚本 `busco_2_matrix_v0.3.py`、`busco2summary_smkv2.py`（批量运行 BUSCO），旧行为仍可用 |
+| `legacy/` | 旧脚本 `busco_2_matrix_v0.3.py`、`busco2summary_smkv2.py`（Snakemake 批量运行 BUSCO；新命令 `busco` 沿用它的命名规则），旧行为仍可用 |
 
 ## 引用
 
@@ -297,6 +318,9 @@ curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/latest/downl
 python3 b2s.pyz matrix -i busco_results/ > status_matrix.tsv
 python3 b2s.pyz matrix -i busco_results/ --set SF -t 50 --format binary -o SF_occ050.tsv
 python3 b2s.pyz run -i busco_results/ -o b2s_out
+# run BUSCO on many SPAdes / rnaSPAdes / Trinity / MEGAHIT / Flye assemblies, then summarise
+# (sample = folder name minus assembler suffix; finished samples skipped; -n = preview)
+python3 b2s.pyz busco -i Spades_results/ Trinity_results/ -o Busco_results -l metazoa_odb12 -c 8
 ```
 
 Or `pip install git+https://github.com/deyuanyang92-dev/busco2summary.git` (add `[all]` for plots and xlsx).

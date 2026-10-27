@@ -1,8 +1,16 @@
 # Changelog
 
 
-## 1.3.0 (2026-10-27)
+## 1.3.0 (2026-10-28)
 
+* new `busco` command: run BUSCO on many assemblies and summarise. Finds SPAdes (`contigs.fasta`,
+  `--fasta scaffolds.fasta`), rnaSPAdes (`transcripts.fasta`), Trinity (`Trinity.fasta` or
+  `<out>.Trinity.fasta`), MEGAHIT, Flye folders and loose FASTA files. Sample names follow
+  `busco2summary_smkv2.py -bfsd --suffix_subdir`: folder name minus the assembler suffix
+  (`JLJC1_Eun1_1201_spades_rna` -> `JLJC1_Eun1_1201`); results in `OUT/<sample>`; mode per sample
+  (transcriptome for rnaSPAdes/Trinity); finished samples skipped (resume); `-J` parallel runs x `-c`
+  threads, no Snakemake; `-n` dry run writes `busco_inputs.tsv`, editable and readable with `--list`;
+  failures in `busco_failed.tsv`; BUSCO found on PATH or in a conda env without activation.
 * new `list` command: names of all BUSCO result folders under `-i`, one per line (`--long`: folder
   name, layout, runs, path); reads no tables (83 folders in 0.4 s).
 * `--samples FILE` (alias of `--include`) for every command: lines may be sample names, folder names
