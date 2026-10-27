@@ -39,6 +39,72 @@ MIT License · Python ≥ 3.8，无必需依赖（matplotlib / openpyxl 可选�
 | 300at33208 | F | M | M | 1 | ✘ |
 | 400at33208 | D | M | M | 0（D 不属于 SF） | ✘ |
 
+## 与其他软件的对比（benchmark）
+
+用 GitHub 上 5 个项目的 6 个脚本和本工具跑**同一份真实数据**，结果与一个独立脚本从原始 `full_table.tsv` /
+`busco_sequences/` 算出的"真值"逐项比对：基因集合、每条记录（基因 × 样品）的状态、每条序列，以及运行前后输入文件 md5。
+数据：D1 = 199 个环节动物基因组（BUSCO 6.0.0 miniprot），D2 = 77 个基因组+转录组（BUSCO 5.8.2）；metazoa_odb12，672 个 BUSCO。
+
+**① 准确度**（每格 = 与真值比对；✔ = 基因集合、每条记录状态、每条序列全部一致）
+
+| 数据 | 集合 | 阈值 | 真值：基因数 | **busco2summary** | 旧脚本 v0.3 | [BUSCO_phylogenomics](https://github.com/jamiemcg/BUSCO_phylogenomics) | [busco2fasta](https://github.com/lstevens17/busco2phylo-nf) | [bigey](https://github.com/bigey/BUSCO-phylogenetics-pipeline) | [ZF](https://github.com/xtmtd/Phylogenomics) version2 | ZF 主版本 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| D1 | S | 50 % | 660 | ✔ 一致 | ✔ | ✔ | ✔ | ✔ | | |
+| D1 | SF | 50 % | 667 | ✔ | ✔ | 不支持 F | 不支持 F | 不支持 F | | |
+| D1 | SF | 90 % | 4 | ✔ | ✔ | | | | | |
+| D1 | S / SF | ≥ 3 类群 | 672 | ✔ | | | | | **0 个基因**（无 .fna，静默跳过） | **0 个基因** |
+| D2 | S | 50 % | 415 | ✔ | ✔ | ✔ | **436（多 21 个）** | ✔ | | |
+| D2 | SF | 50 % / 90 % | 652 / 171 | ✔ | ✔ | | | | | |
+| D2 | S / SF | ≥ 3 类群 | 672 | ✔ | | | | | 只用了 32/77 个样品 | 只用了 32/77 个样品 |
+
+结论：
+
+* **busco2summary 在全部 12 种设置下与真值完全一致**（基因集合、全部记录状态、全部序列），S 与 S+F、任意阈值、≥ K 类群都支持，用到所有样品。
+* 其他软件按各自规则实现都正确，差异来自**规则不同**：busco2fasta 用 `round(N·p)`，77 个样品时 "50 %" = round(38.5) = 38 个样品，比 ⌈N·t⌉ = 39 多选 21 个基因；
+  ZF 只收集有 `.fna` 的样品，BUSCO 6 miniprot 结果没有 `.fna`，被**静默跳过**（退出码 0、无提示）。
+* 34 次运行中没有任何软件改动输入文件。
+
+
+**② 速度与内存**（D1 = 199 个基因组；wall time）
+
+| 工具 | 做了什么 | D1 时间 / 内存 | D2 时间 |
+|---|---|---|---|
+| **busco2summary `matrix`** | 只输出一个基因 × 样品矩阵 | 8 s / 58 MB | 3 s / 32 MB |
+| **busco2summary `run`** | 全部：汇总表、矩阵、基因列表、图、HTML 报告 | 18.8 s / 365 MB（不装 matplotlib：9 s / 65 MB） | 8.2 s |
+| busco2summary 再次运行（解析缓存） | 同上 | 2.7 s / 56 MB | 1.2 s |
+| 旧脚本 busco_2_matrix v0.3 | 矩阵 + 列表 + HTML | 24.8 s / 234 MB | 9.9 s |
+| BUSCO_phylogenomics `count_buscos.py` | 只统计 S | 1.1 s / 18 MB | 0.4 s |
+| MultiQC busco | 只有每个样品的百分比 | 29.2 s / 320 MB | 13.8 s |
+
+**③ 鲁棒性**：把实际会遇到的 8 种"难搞"的目录结构放进同一个文件夹（BUSCO v3 嵌套、v5、v6 miniprot、转录组、
+auto-lineage、空样品、缺 full_table、compleasm），看每个工具能否正确识别每个样品：
+
+| 工具 | 得分 | 问题 |
+|---|---|---|
+| **busco2summary** | **8/8** | — |
+| 旧脚本 busco_2_matrix v0.3 | 6/8 | 漏掉 v3 嵌套目录、compleasm |
+| busco2summary_smkv2 | 5/8 | 漏掉 v3、compleasm；auto-lineage 取错 run |
+| MultiQC busco | 5/8 | 名字清洗会把两个不同样品合并成一个 |
+| BUSCO_phylogenomics `count_buscos.py` | 0/8 | 遇到一个缺 `single_copy_busco_sequences` 的样品就崩溃 |
+
+**④ 功能**（据各工具源码；✓ 有，~ 部分，✗ 无）
+
+| 功能 | **busco2summary** | 旧脚本 v0.3 | BUSCO_phylogenomics | busco2fasta | ZF | MultiQC |
+|---|---|---|---|---|---|---|
+| 每个样品 S/D/F/M 计数 | ✓ | ✓ | 只有 S | ✗ | ✗ | ✓ |
+| 基因 × 样品状态矩阵（含全缺失基因） | ✓ | ~ | 只有 S 有/无 | ✗ | ✗ | ✗ |
+| 使用 F 片段（S+F）及片段长度比 | ✓ | ~（无长度比） | ✗ | ✗ | ~ 主版本 S+F，无长度比 | ✗ |
+| 一次输出多个占有率阈值的基因列表 | ✓（⌈t·N⌉） | ~ | 只有计数 | 一个阈值，`round()` | 固定 ≥ 3 类群 | ✗ |
+| 完整度 × 占有率网格、删样品建议 | ✓ | ~ | ✗ | ✗ | ✗ | ✗ |
+| 重复拷贝取得分最高者 | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| miniprot 结果（无 `.fna`）重建 CDS | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| BUSCO v3 / v4–v6 / compleasm | ✓ / ✓ / ✓ | ~ / ✓ / ✗ | ~ / ✓ / ✗ | ✗ / ✓ / ✗ | ✓ / v5 / ✗ | ✓ / ✓ / ✗ |
+| 不删除、不修改原始数据 | ✓ | `--overwrite` 删输出目录 | ✓ | 总是删输出目录 | 复制输入后改副本 | `-f` 覆盖 |
+| 交互式 HTML、可断点续跑 | ✓ / ✓ | ✓ / ✗ | ✗ / ✗ | ✗ / ✗ | ✗ / ✗ | ✓ / ✗ |
+
+完整表格（记录数、运行时间、内存、鲁棒性测试）和复现命令见 [`benchmark/README.md`](benchmark/README.md)，
+原始打分结果见 [`benchmark/results/`](benchmark/results/)。
+
 ---
 
 ## 为什么要这个工具
@@ -255,32 +321,6 @@ b2s_out/
 
 [`docs/VALIDATION.md`](docs/VALIDATION.md)：逐版本 BUSCO 输出格式（据源码，[`docs/BUSCO_FORMATS.md`](docs/BUSCO_FORMATS.md)）、
 独立代码审查、3,041 个真实样品逐一复算、72 个基因列表独立复算，以及**尚未覆盖的范围**和可直接用的方法描述。
-
-## 与其他软件的对比（benchmark）
-
-用 GitHub 上 5 个项目的 6 个脚本和本工具跑**同一份真实数据**，结果与一个独立脚本从原始 `full_table.tsv` /
-`busco_sequences/` 算出的"真值"逐项比对：基因集合、每条记录（基因 × 样品）的状态、每条序列，以及运行前后输入文件 md5。
-数据：D1 = 199 个环节动物基因组（BUSCO 6.0.0 miniprot），D2 = 77 个基因组+转录组（BUSCO 5.8.2）；metazoa_odb12，672 个 BUSCO。
-
-| 数据 | 集合 | 阈值 | 真值：基因数 | **busco2summary** | 旧脚本 v0.3 | [BUSCO_phylogenomics](https://github.com/jamiemcg/BUSCO_phylogenomics) | [busco2fasta](https://github.com/lstevens17/busco2phylo-nf) | [bigey](https://github.com/bigey/BUSCO-phylogenetics-pipeline) | [ZF](https://github.com/xtmtd/Phylogenomics) version2 | ZF 主版本 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| D1 | S | 50 % | 660 | ✔ 一致 | ✔ | ✔ | ✔ | ✔ | | |
-| D1 | SF | 50 % | 667 | ✔ | ✔ | 不支持 F | 不支持 F | 不支持 F | | |
-| D1 | SF | 90 % | 4 | ✔ | ✔ | | | | | |
-| D1 | S / SF | ≥ 3 类群 | 672 | ✔ | | | | | **0 个基因**（无 .fna，静默跳过） | **0 个基因** |
-| D2 | S | 50 % | 415 | ✔ | ✔ | ✔ | **436（多 21 个）** | ✔ | | |
-| D2 | SF | 50 % / 90 % | 652 / 171 | ✔ | ✔ | | | | | |
-| D2 | S / SF | ≥ 3 类群 | 672 | ✔ | | | | | 只用了 32/77 个样品 | 只用了 32/77 个样品 |
-
-结论：
-
-* **busco2summary 在全部 12 种设置下与真值完全一致**（基因集合、全部记录状态、全部序列），S 与 S+F、任意阈值、≥ K 类群都支持，用到所有样品。
-* 其他软件按各自规则实现都正确，差异来自**规则不同**：busco2fasta 用 `round(N·p)`，77 个样品时 "50 %" = round(38.5) = 38 个样品，比 ⌈N·t⌉ = 39 多选 21 个基因；
-  ZF 只收集有 `.fna` 的样品，BUSCO 6 miniprot 结果没有 `.fna`，被**静默跳过**（退出码 0、无提示）。
-* 34 次运行中没有任何软件改动输入文件。
-
-完整表格（记录数、运行时间、内存、鲁棒性测试）和复现命令见 [`benchmark/README.md`](benchmark/README.md)，
-原始打分结果见 [`benchmark/results/`](benchmark/results/)。
 
 ## 旧脚本
 
