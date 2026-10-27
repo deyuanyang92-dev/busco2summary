@@ -432,14 +432,14 @@ def _do_extract(args, ds: analysis.Dataset, genes: List[str], sset: str, out: Pa
 
 
 def cmd_list(args) -> int:
-    from .loader import discover, make_name
+    from .loader import discover, sample_names
     if not args.input:
         error("give -i/--input")
         return 2
     inc, exc = _read_set(args.include), _read_set(args.exclude)
     rows = []
-    for c in discover([Path(i) for i in args.input], max_depth=args.max_depth):
-        nm = make_name(c.dir_name, args.name_style, args.replace_dots)
+    cands = discover([Path(i) for i in args.input], max_depth=args.max_depth)
+    for c, nm in zip(cands, sample_names(cands, args.name_style, args.replace_dots)):
         if inc and nm not in inc and c.dir_name not in inc:
             continue
         if exc and (nm in exc or c.dir_name in exc):

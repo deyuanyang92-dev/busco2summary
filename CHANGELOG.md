@@ -7,6 +7,7 @@
   name, layout, runs, path); reads no tables (83 folders in 0.4 s).
 * `--samples FILE` (alias of `--include`) for every command: lines may be sample names, folder names
   or paths (the `list --long` output works as is); names not found are reported.
+* result folders sharing one name (BUSCO run inside each assembly folder, e.g. `sampleA/spades/busco_scaffolds`) are named after the first parent folder that differs (`sampleA`) instead of `busco_scaffolds`, `busco_scaffolds_2`, ...
 * releases are made locally with `scripts/release.sh` (no GitHub Actions workflow scope needed).
 * README reorganised.
 

@@ -48,6 +48,15 @@ b2s run    -i busco_results/ --samples samples.txt -o b2s_out
 名单每行可以是样品名、文件夹名或完整路径；`#` 开头的行忽略；名单里找不到的名字会提示。
 反过来，`--exclude 名单` 去掉这些样品。
 
+**SPAdes 等组装后跑的 BUSCO，直接汇总**：
+
+```bash
+b2s summary -i assemblies/ -o busco_summary_out     # → busco_summary.tsv：每个样品一行 C/S/D/F/M、N50 等
+```
+
+BUSCO 结果放在每个组装文件夹里、文件夹名都一样时（如 `sampleA/spades/busco_scaffolds/`、`sampleB/spades/busco_scaffolds/`），
+样品名自动取各自不同的上级文件夹（`sampleA`、`sampleB`），不会混成一个名字。
+
 常用示例：
 
 ```bash

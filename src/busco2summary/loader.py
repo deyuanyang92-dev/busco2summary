@@ -117,6 +117,32 @@ def make_name(dir_name: str, style: str = "dir", replace_dots: bool = False,
     return name or dir_name
 
 
+def sample_names(cands: Sequence["Candidate"], style: str = "dir",
+                 replace_dots: bool = False) -> List[str]:
+    """Sample name per result folder.
+
+    Normally the result folder's own name. When several results share that name (BUSCO run inside
+    each assembly folder, e.g. ``sampleA/spades/busco_scaffolds`` and ``sampleB/spades/busco_scaffolds``),
+    the first path component that differs between them is used instead (``sampleA``, ``sampleB``).
+    """
+    names = [make_name(c.dir_name, style, replace_dots) for c in cands]
+    groups: Dict[str, List[int]] = {}
+    for i, n in enumerate(names):
+        groups.setdefault(n, []).append(i)
+    for idx in groups.values():
+        if len(idx) < 2:
+            continue
+        parts = [Path(os.path.realpath(cands[i].path)).parts for i in idx]
+        k = 0
+        while all(len(p) > k + 1 for p in parts) and len({p[k] for p in parts}) == 1:
+            k += 1
+        new = [make_name(p[k], style, replace_dots) for p in parts]
+        if len(set(new)) == len(new):
+            for i, n in zip(idx, new):
+                names[i] = n
+    return names
+
+
 # --------------------------------------------------------------------------
 # discovery
 # --------------------------------------------------------------------------
@@ -557,14 +583,18 @@ def load_all(inputs: Sequence[str], sample_sheet: Optional[str] = None,
     used: set = set()
     matched: set = set()
     seen_paths: set = set()
-    jobs = []
+    uniq = []
     for c in cands:
         rp = os.path.realpath(c.path)
         if rp in seen_paths:
             warn(f"{c.path} listed more than once; using it once")
             continue
         seen_paths.add(rp)
-        nm = rename.get(str(c.path)) or make_name(c.dir_name, name_style, replace_dots)
+        uniq.append(c)
+    auto = sample_names(uniq, name_style, replace_dots)
+    jobs = []
+    for c, auto_nm in zip(uniq, auto):
+        nm = rename.get(str(c.path)) or auto_nm
         if replace_dots and str(c.path) in rename:
             nm = nm.replace(".", "_")
         if include:

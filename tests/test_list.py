@@ -36,3 +36,15 @@ def test_samples_file_restricts_matrix(tmp_path, capsys):
     run("list", "-i", tmp_path / "in", "--long", "--exclude", tmp_path / "s.txt", "-o", tmp_path / "l.tsv")
     run("matrix", "-i", tmp_path / "in", "--samples", tmp_path / "l.tsv", "-o", tmp_path / "m2.tsv")
     assert read_tsv(tmp_path / "m2.tsv")[0] == ["busco_id", "Y"]
+
+
+def test_busco_inside_assembly_folders_named_by_sample(tmp_path):
+    # BUSCO run in each SPAdes folder: every result folder has the same name
+    for s in ("sampleA", "sampleB"):
+        _write_run(tmp_path / "in" / s / "spades" / "busco_scaffolds" / "run_metazoa_odb12",
+                   dict(zip(GENES, "SSFDMS")))
+    run("list", "-i", tmp_path / "in", "-o", tmp_path / "s.txt")
+    assert (tmp_path / "s.txt").read_text().split() == ["sampleA", "sampleB"]
+    run("summary", "-i", tmp_path / "in", "-o", tmp_path / "out")
+    rows = read_tsv(tmp_path / "out" / "busco_summary.tsv")
+    assert [r[0] for r in rows[1:]] == ["sampleA", "sampleB"]
