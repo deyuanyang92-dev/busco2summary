@@ -79,7 +79,7 @@ b2s extract -i busco_results/ -o seqs --genes lists/gene_lists/SF/SF_occ090.txt 
 | `run`（无图） | 仅标准库 | 35 MB / 65 MB | 4 s / 9 s |
 | `run`（含 PNG/PDF 图） | matplotlib | 约 380 MB | 8 s / 19 s |
 
-在 Snakemake 中调用：`snakemake -s workflow/Snakefile --config busco_dir=busco_results out=b2s_out -c 8`。
+**不需要 Snakemake**：一条命令几秒钟跑完。只有当你自己的流程本来就用 Snakemake 时，才可以用自带的 `workflow/Snakefile` 把它接在 BUSCO 后面。
 
 ## 输出
 
