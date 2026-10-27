@@ -1,25 +1,37 @@
-dataset	tool	set	threshold	exit	wall_s	max_rss_mb	genes_out	genes_truth	vs_truth	own_rule	genes_own_rule	vs_own_rule	records	records_right_status	records_wrong_status	records_missing	seq_identical	seq_different	headers_unresolved	headers_duplicated
-D1	busco2summary 1.1.0	S	50%	0	38.8	190.0	660	660	exact	ceil	660	exact	96383	96383	0	0	96383	0	0	0
-D1	busco_2_matrix v0.3 (legacy)	S	50%	0	16.48	181.0	660	660	exact	float	660	exact	96383	96383	0	0	96383	0	0	0
-D1	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	50%	1	12.1	249.6	660	660	exact	float	660	exact	96383	96383	0	0	96383	0	0	0
-D1	busco2summary 1.1.0	S	90%	0	10.24	63.0	0	0	exact	ceil	0	exact	0	0	0	0	0	0	0	0
-D1	busco_2_matrix v0.3 (legacy)	S	90%	0	13.4	166.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0
-D1	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	90%	0	3.26	132.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0
-D1	busco2summary 1.1.0	S	min3	0	42.64	184.0	672	672	exact	ceil	672	exact	97221	97221	0	0	97221	0	0	0
-D1	busco2summary 1.1.0	SF	50%	0	40.92	215.0	667	667	exact	ceil	667	exact	107640	107640	0	0	107640	0	0	0
-D1	busco_2_matrix v0.3 (legacy)	SF	50%	0	17.24	182.0	667	667	exact	float	667	exact	107640	107640	0	0	107640	0	0	0
-D1	busco2summary 1.1.0	SF	90%	0	9.9	62.0	4	4	exact	ceil	4	exact	726	726	0	0	726	0	0	0
-D1	busco_2_matrix v0.3 (legacy)	SF	90%	0	13.66	165.0	4	4	exact	float	4	exact	726	726	0	0	726	0	0	0
-D1	busco2summary 1.1.0	SF	min3	0	47.07	211.0	672	672	exact	ceil	672	exact	107975	107975	0	0	107975	0	0	0
-D2	busco2summary 1.1.0	S	50%	0	9.59	49.0	415	415	exact	ceil	415	exact	19393	19393	0	0	19393	0	0	0
-D2	busco_2_matrix v0.3 (legacy)	S	50%	0	5.48	99.0	415	415	exact	float	415	exact	19393	19393	0	0	19393	0	0	0
-D2	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	50%	1	4.73	90.0	415	415	exact	float	415	exact	19393	19393	0	0	19393	0	0	0
-D2	busco2summary 1.1.0	S	90%	0	4.11	31.0	0	0	exact	ceil	0	exact	0	0	0	0	0	0	0	0
-D2	busco_2_matrix v0.3 (legacy)	S	90%	0	4.59	94.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0
-D2	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	90%	0	0.89	67.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0
-D2	busco2summary 1.1.0	S	min3	0	15.17	73.0	672	672	exact	ceil	672	exact	27150	27150	0	0	27150	0	0	0
-D2	busco2summary 1.1.0	SF	50%	0	16.34	89.0	652	652	exact	ceil	652	exact	40560	40560	0	0	40560	0	0	0
-D2	busco_2_matrix v0.3 (legacy)	SF	50%	0	7.24	101.0	652	652	exact	float	652	exact	40560	40560	0	0	40560	0	0	0
-D2	busco2summary 1.1.0	SF	90%	0	7.37	49.0	171	171	exact	ceil	171	exact	12342	12342	0	0	12342	0	0	0
-D2	busco_2_matrix v0.3 (legacy)	SF	90%	0	5.67	96.0	171	171	exact	float	171	exact	12342	12342	0	0	12342	0	0	0
-D2	busco2summary 1.1.0	SF	min3	0	18.88	88.0	672	672	exact	ceil	672	exact	41216	41216	0	0	41216	0	0	0
+dataset	tool	set	threshold	exit	wall_s	max_rss_mb	genes_out	genes_truth	vs_truth	own_rule	genes_own_rule	vs_own_rule	records	records_right_status	records_wrong_status	records_missing	seq_identical	seq_different	headers_unresolved	headers_duplicated	samples_total	samples_in_output	vs_truth_used_samples	records_missing_used_samples
+D1	busco2summary 1.1.0	S	50%	0	38.8	190.0	660	660	exact	ceil	660	exact	96383	96383	0	0	96383	0	0	0	199	192	-	-
+D1	busco_2_matrix v0.3 (legacy)	S	50%	0	16.48	181.0	660	660	exact	float	660	exact	96383	96383	0	0	96383	0	0	0	199	192	-	-
+D1	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	50%	1	12.1	249.6	660	660	exact	float	660	exact	96383	96383	0	0	96383	0	0	0	199	192	-	-
+D1	busco2fasta.py (lstevens17/busco2phylo-nf)	S	50%	0	2.29	12.0	660	660	exact	round	660	exact	96383	96383	0	0	96383	0	0	0	199	192	-	-
+D1	busco-phylo.py (bigey/BUSCO-phylogenetics-pipeline)	S	50%	0	10.63	242.2	660	660	exact	float	660	exact	96383	96383	0	0	96383	0	0	0	199	192	-	-
+D1	busco2summary 1.1.0	S	90%	0	10.24	63.0	0	0	exact	ceil	0	exact	0	0	0	0	0	0	0	0	199	0	-	-
+D1	busco_2_matrix v0.3 (legacy)	S	90%	0	13.4	166.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0	199	0	-	-
+D1	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	90%	0	3.26	132.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0	199	0	-	-
+D1	busco2fasta.py (lstevens17/busco2phylo-nf)	S	90%	0	0.16	11.0	0	0	exact	round	0	exact	0	0	0	0	0	0	0	0	199	0	-	-
+D1	busco-phylo.py (bigey/BUSCO-phylogenetics-pipeline)	S	90%	0	2.95	128.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0	199	0	-	-
+D1	busco2summary 1.1.0	S	min3	0	42.64	184.0	672	672	exact	ceil	672	exact	97221	97221	0	0	97221	0	0	0	199	192	-	-
+D1	ZF BUSCO_extraction.sh (version2)	S	min3	0	47.53	7.0	0	672	+0/-672	min3	672	+0/-672	0	0	0	0	0	0	0	0	199	0	-	-
+D1	busco2summary 1.1.0	SF	50%	0	40.92	215.0	667	667	exact	ceil	667	exact	107640	107640	0	0	107640	0	0	0	199	192	-	-
+D1	busco_2_matrix v0.3 (legacy)	SF	50%	0	17.24	182.0	667	667	exact	float	667	exact	107640	107640	0	0	107640	0	0	0	199	192	-	-
+D1	busco2summary 1.1.0	SF	90%	0	9.9	62.0	4	4	exact	ceil	4	exact	726	726	0	0	726	0	0	0	199	190	-	-
+D1	busco_2_matrix v0.3 (legacy)	SF	90%	0	13.66	165.0	4	4	exact	float	4	exact	726	726	0	0	726	0	0	0	199	190	-	-
+D1	busco2summary 1.1.0	SF	min3	0	47.07	211.0	672	672	exact	ceil	672	exact	107975	107975	0	0	107975	0	0	0	199	192	-	-
+D1	ZF BUSCO_extraction.sh (main, xtmtd/Phylogenomics)	SF	min3	0	303.72	8.0	0	672	+0/-672	min3	672	+0/-672	0	0	0	0	0	0	0	0	199	0	-	-
+D2	busco2summary 1.1.0	S	50%	0	9.59	49.0	415	415	exact	ceil	415	exact	19393	19393	0	0	19393	0	0	0	77	77	-	-
+D2	busco_2_matrix v0.3 (legacy)	S	50%	0	5.48	99.0	415	415	exact	float	415	exact	19393	19393	0	0	19393	0	0	0	77	77	-	-
+D2	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	50%	1	4.73	90.0	415	415	exact	float	415	exact	19393	19393	0	0	19393	0	0	0	77	77	-	-
+D2	busco2fasta.py (lstevens17/busco2phylo-nf)	S	50%	0	0.63	12.0	436	415	+21/-0	round	436	exact	20191	20191	0	0	20191	0	0	0	77	77	-	-
+D2	busco-phylo.py (bigey/BUSCO-phylogenetics-pipeline)	S	50%	0	4.7	90.0	415	415	exact	float	415	exact	19393	19393	0	0	19393	0	0	0	77	77	-	-
+D2	busco2summary 1.1.0	S	90%	0	4.11	31.0	0	0	exact	ceil	0	exact	0	0	0	0	0	0	0	0	77	0	-	-
+D2	busco_2_matrix v0.3 (legacy)	S	90%	0	4.59	94.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0	77	0	-	-
+D2	BUSCO_phylogenomics (jamiemcg, bioconda 20240919)	S	90%	0	0.89	67.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0	77	0	-	-
+D2	busco2fasta.py (lstevens17/busco2phylo-nf)	S	90%	0	0.08	11.0	0	0	exact	round	0	exact	0	0	0	0	0	0	0	0	77	0	-	-
+D2	busco-phylo.py (bigey/BUSCO-phylogenetics-pipeline)	S	90%	0	1.15	67.0	0	0	exact	float	0	exact	0	0	0	0	0	0	0	0	77	0	-	-
+D2	busco2summary 1.1.0	S	min3	0	15.17	73.0	672	672	exact	ceil	672	exact	27150	27150	0	0	27150	0	0	0	77	77	-	-
+D2	ZF BUSCO_extraction.sh (version2)	S	min3	0	54.44	4.0	669	672	+0/-3	min3	672	+0/-3	14433	14433	0	12675	14433	0	0	0	77	32	exact	0
+D2	busco2summary 1.1.0	SF	50%	0	16.34	89.0	652	652	exact	ceil	652	exact	40560	40560	0	0	40560	0	0	0	77	77	-	-
+D2	busco_2_matrix v0.3 (legacy)	SF	50%	0	7.24	101.0	652	652	exact	float	652	exact	40560	40560	0	0	40560	0	0	0	77	77	-	-
+D2	busco2summary 1.1.0	SF	90%	0	7.37	49.0	171	171	exact	ceil	171	exact	12342	12342	0	0	12342	0	0	0	77	77	-	-
+D2	busco_2_matrix v0.3 (legacy)	SF	90%	0	5.67	96.0	171	171	exact	float	171	exact	12342	12342	0	0	12342	0	0	0	77	77	-	-
+D2	busco2summary 1.1.0	SF	min3	0	18.88	88.0	672	672	exact	ceil	672	exact	41216	41216	0	0	41216	0	0	0	77	77	-	-
+D2	ZF BUSCO_extraction.sh (main, xtmtd/Phylogenomics)	SF	min3	0	132.05	5.0	672	672	exact	min3	672	exact	16892	16892	0	24324	16892	0	0	0	77	32	exact	0

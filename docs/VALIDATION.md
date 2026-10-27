@@ -54,10 +54,13 @@ busco2summary:
   highest-scoring full_table copy; miniprot CDS rebuilt from the genome: 1,292/1,293 translate exactly
   to the BUSCO protein (the one exception is flagged in the manifest).
 
-* gene matrices cross-validated against other tools (`benchmark/matrix_benchmark.py`, results in
-  `benchmark/README.md` §4): busco2summary, busco_2_matrix v0.3 and BUSCO_phylogenomics give gene
-  sets, records and sequences identical to an independently computed truth on D1 and D2
-  (S and SF, 50 % / 90 % / ≥ 3 taxa; up to 107,975 records per matrix, 0 differences).
+* gene matrices cross-validated against six other scripts from five projects
+  (`benchmark/matrix_benchmark.py`, results in `benchmark/README.md` §4): busco_2_matrix v0.3,
+  BUSCO_phylogenomics, busco2fasta, bigey busco-phylo and ZF BUSCO_extraction.sh (main, version2).
+  busco2summary was identical to an independently computed truth in all 12 settings (gene sets,
+  record statuses, sequences; up to 107,975 records). The other tools agreed with the truth under
+  their own documented rule, except that ZF silently skips samples without `.fna` (all of D1, 45/77
+  of D2) and busco2fasta's `round()` makes "50 %" select 21 more genes at N = 77.
 
 ## 4. Not covered — say so if you use these
 

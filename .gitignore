@@ -7,3 +7,4 @@ dist/
 .cache/
 b2s_out*/
 benchmark/work/
+.claude/settings.local.json

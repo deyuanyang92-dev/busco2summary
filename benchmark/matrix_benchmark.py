@@ -13,6 +13,8 @@ Scored per run:
           samples) and under the rule the tool itself documents (round / float / >= 3 taxa)
   cells   (gene, sample) records: present in truth with the right status? missing? extra?
   seqs    record sequence == that sample's BUSCO protein (terminal/internal '*' ignored)
+  used    if a tool leaves samples out entirely, also scored against the truth for the samples
+          it did use (separates "skips input" from "selects wrongly")
   inputs  md5 of every input file before and after (tools must not modify their input)
 
 Alignment / trimming / tree programs are replaced by pass-through stubs written to
@@ -325,6 +327,17 @@ def score_run(r: dict, status, genes, seqs) -> dict:
             else:
                 seq_bad += 1
         cell_missing += len(expect - set(d))
+    # Samples the tool used at all. If it silently skipped samples (ZF: runs without .fna),
+    # re-score against the truth for only those samples, under the tool's own rule.
+    used = {s for d in out.values() for s in d}
+    sub = {s: status[s] for s in used}
+    if used and cell_missing:
+        want_sub = truth_genes(sub, genes, sset, t, "ceil" if rule == "min3" else rule)
+        miss_sub = sum(len({s for s in sub if sub[s].get(g, "M") in sset} - set(out.get(g, {})))
+                       for g in want_sub)
+        vs_sub = "exact" if got == want_sub else f"+{len(got - want_sub)}/-{len(want_sub - got)}"
+    else:
+        vs_sub, miss_sub = "-", "-"
     return {
         "dataset": r["dataset"], "tool": NAMES[r["tool"]], "set": sset,
         "threshold": t if t == "min3" else f"{int(round(t * 100))}%", "exit": r["rc"],
@@ -336,6 +349,8 @@ def score_run(r: dict, status, genes, seqs) -> dict:
         "records": cells, "records_right_status": cell_ok, "records_wrong_status": cell_wrong_status,
         "records_missing": cell_missing, "seq_identical": seq_ok, "seq_different": seq_bad,
         "headers_unresolved": unresolved, "headers_duplicated": dup,
+        "samples_total": len(samples), "samples_in_output": len(used),
+        "vs_truth_used_samples": vs_sub, "records_missing_used_samples": miss_sub,
     }
 
 
@@ -363,7 +378,9 @@ def cmd_score(args, cfg):
         print("\t".join(str(r[k]) for k in ("dataset", "tool", "set", "threshold", "exit", "genes_out",
                                             "vs_truth", "vs_own_rule", "records", "records_wrong_status",
                                             "records_missing", "seq_identical", "seq_different",
-                                            "headers_unresolved", "wall_s")))
+                                            "headers_unresolved", "samples_in_output",
+                                            "vs_truth_used_samples", "records_missing_used_samples",
+                                            "wall_s")))
 
 
 def main():

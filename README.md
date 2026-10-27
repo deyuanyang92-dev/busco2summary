@@ -189,6 +189,13 @@ b2s_out/
 见 [`benchmark/README.md`](benchmark/README.md)：结果由独立脚本从原始 `full_table.tsv` 计算真值后逐项打分，
 并记录运行时间和内存。
 
+**基因矩阵交叉验证**（`benchmark/matrix_benchmark.py`，详见 benchmark/README §4）：与 5 个项目的 6 个脚本
+（旧脚本 v0.3、BUSCO_phylogenomics、busco2fasta、bigey busco-phylo、ZF BUSCO_extraction.sh 主版本与 version2）
+在 D1（199 个基因组）和 D2（77 个样品）上比较。busco2summary 在全部 12 种设置下与独立真值完全一致
+（基因集合、每条记录的状态、每条序列）。其他工具按各自规则也都正确，但有两点差异要注意：
+busco2fasta 用 `round()`，77 个样品时 "50 %" 只要求 38 个样品，比 ⌈N·t⌉ 多选 21 个基因；
+ZF 只收有 `.fna` 的样品，miniprot 结果（BUSCO 6）全部被静默跳过。
+
 ## 旧脚本
 
 `legacy/` 保留 `busco_2_matrix_v0.3.py`（内部 v7.2.0）和 `busco2summary_smkv2.py`（v2.8.6，批量运行 BUSCO），

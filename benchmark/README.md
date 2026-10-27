@@ -81,32 +81,49 @@ Alignment / trimming / tree programs are replaced by pass-through stubs, so only
 extraction are timed. Input: D1 = 199 annelid genome runs (192 non-empty, BUSCO 6.0.0 miniprot),
 D2 = 77 runs (BUSCO 5.8.2, metazoa_odb12); 672 BUSCOs.
 
-| data | set | t | genes (truth) | records | busco2summary 1.1.0 | busco_2_matrix v0.3 | BUSCO_phylogenomics 20240919 |
-|---|---|---|---|---|---|---|---|
-| D1 | S | 50 % | 660 | 96,383 | exact · 38.8 s | exact · 16.5 s | exact · 12.1 s¹ |
-| D1 | S | 90 % | 0 | 0 | exact | exact | exact |
-| D1 | SF | 50 % | 667 | 107,640 | exact · 40.9 s | exact · 17.2 s | (S only) |
-| D1 | SF | 90 % | 4 | 726 | exact | exact | (S only) |
-| D1 | S / SF | ≥ 3 taxa | 672 / 672 | 97,221 / 107,975 | exact / exact | – | – |
-| D2 | S | 50 % | 415 | 19,393 | exact · 9.6 s | exact · 5.5 s | exact · 4.7 s¹ |
-| D2 | S | 90 % | 0 | 0 | exact | exact | exact |
-| D2 | SF | 50 % | 652 | 40,560 | exact · 16.3 s | exact · 7.2 s | (S only) |
-| D2 | SF | 90 % | 171 | 12,342 | exact · 7.4 s | exact · 5.7 s | (S only) |
-| D2 | S / SF | ≥ 3 taxa | 672 / 672 | 27,150 / 41,216 | exact / exact | – | – |
+Tools: busco2summary 1.1.0; busco_2_matrix v0.3 (our legacy script); BUSCO_phylogenomics
+(jamiemcg, bioconda 20240919); `busco2fasta.py` (lstevens17/busco2phylo-nf, commit 2308a1c);
+`busco-phylo.py` (bigey/BUSCO-phylogenetics-pipeline, commit eeb3f12); ZF `BUSCO_extraction.sh`
+main and version2 (xtmtd/Phylogenomics, commit 04838a1). Each was run with the status set and
+threshold it supports.
 
-"exact" = gene set equal to truth under both rules, 0 wrong-status records, 0 missing records,
-0 sequence differences. Input files unchanged in every run. busco2summary writes more per run
-(manifest, nucleotide CDS rebuilt for miniprot runs, reports), hence the longer time.
-¹ exits 1 after writing the sequences: with stub "alignments" (unaligned) its PHYLIP writer
-fails; with the real MUSCLE the same D1 run did not finish in 4 h (ISSUES #32).
+**Gene count / records; "exact" = identical to truth (gene set, every record's status, every
+sequence).** Wall time in seconds.
 
-At these N the rule difference (ceil vs float vs round) never changed a gene set; it can at
-other N (e.g. N = 77, t = 0.5: ceil and float need 39, `round(38.5)` = 38).
+| data | set | t | truth: genes / records | busco2summary | v0.3 | BUSCO_phylogenomics | busco2fasta | bigey busco-phylo | ZF version2 | ZF main |
+|---|---|---|---|---|---|---|---|---|---|---|
+| D1 | S | 50 % | 660 / 96,383 | exact · 38.8 | exact · 16.5 | exact · 12.1¹ | exact · 2.3 | exact · 10.6 | | |
+| D1 | S | 90 % | 0 / 0 | exact | exact | exact | exact | exact | | |
+| D1 | SF | 50 % | 667 / 107,640 | exact · 40.9 | exact · 17.2 | | | | | |
+| D1 | SF | 90 % | 4 / 726 | exact | exact | | | | | |
+| D1 | S | ≥ 3 taxa | 672 / 97,221 | exact · 42.6 | | | | | **0 genes**² · 47.5 | |
+| D1 | SF | ≥ 3 taxa | 672 / 107,975 | exact · 47.1 | | | | | | **0 genes**² · 303.7 |
+| D2 | S | 50 % | 415 / 19,393 | exact · 9.6 | exact · 5.5 | exact · 4.7¹ | **436** (+21)³ · 0.6 | exact · 4.7 | | |
+| D2 | S | 90 % | 0 / 0 | exact | exact | exact | exact | exact | | |
+| D2 | SF | 50 % | 652 / 40,560 | exact · 16.3 | exact · 7.2 | | | | | |
+| D2 | SF | 90 % | 171 / 12,342 | exact · 7.4 | exact · 5.7 | | | | | |
+| D2 | S | ≥ 3 taxa | 672 / 27,150 | exact · 15.2 | | | | | 669 genes, 32/77 samples⁴ · 54.4 | |
+| D2 | SF | ≥ 3 taxa | 672 / 41,216 | exact · 18.9 | | | | | | 672 genes, 32/77 samples⁴ · 132.1 |
 
-Still to run (the sandbox does not let the agent execute freshly cloned code; the user runs
-`run_external.sh`): `busco2fasta.py`, bigey `busco-phylo.py`, ZF `BUSCO_extraction.sh` (main and
-version2). Their feature-table rows come from reading their source code.
+Across all 34 runs: 0 records with a wrong status, 0 sequences different from the BUSCO protein,
+0 unresolved headers; every tool left its input unchanged (md5 of every file before/after).
 
+1. exits 1 after writing the sequences: with stub "alignments" its PHYLIP writer fails on unequal
+   lengths; with the real MUSCLE the same D1 run did not finish in 4 h (ISSUES #32).
+2. D1 is BUSCO 6 miniprot output, which has no `.fna`; ZF collects a locus only when the `.fna`
+   exists, so nothing is collected — silently, exit 0.
+3. not an error: busco2fasta documents `count ≥ round(N·p)`; N = 77, p = 0.5 → `round(38.5)` = 38,
+   while "50 %" read as ⌈N·t⌉ (busco2summary) or `count/N ≥ t` needs 39. Its 436 genes equal the
+   truth under its own rule. The same "50 %" therefore means different matrices in different tools.
+4. ZF silently dropped the 45 D2 samples without `.fna` (exit 0, no message); 12,675 (S) and
+   24,324 (SF) expected records are missing. Re-scored against the truth for the 32 samples it
+   kept, both ZF versions are exact (gene sets, 0 missing records, sequences identical).
+
+Conclusion: every tool that selects by occupancy agrees with the independent truth once its own
+rounding rule is taken into account; the differences are (a) rounding of the threshold
+(busco2fasta) and (b) samples silently skipped (ZF without `.fna`). busco2summary covers S and
+S+F, any threshold and the ≥ 3-taxa rule, uses every sample, and reports which samples / calls
+were not used (manifest).
 
 ## Feature comparison
 
