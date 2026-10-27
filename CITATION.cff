@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use busco2summary, please cite it as below (and BUSCO / miniprot)."
 title: "busco2summary: detailed multi-sample BUSCO post-processing"
-version: 1.2.0
+version: 1.3.0
 date-released: 2026-10-27
 license: MIT
 repository-code: "https://github.com/deyuanyang92-dev/busco2summary"

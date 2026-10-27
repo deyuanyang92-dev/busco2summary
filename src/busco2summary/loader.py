@@ -555,6 +555,7 @@ def load_all(inputs: Sequence[str], sample_sheet: Optional[str] = None,
         return []
 
     used: set = set()
+    matched: set = set()
     seen_paths: set = set()
     jobs = []
     for c in cands:
@@ -566,8 +567,10 @@ def load_all(inputs: Sequence[str], sample_sheet: Optional[str] = None,
         nm = rename.get(str(c.path)) or make_name(c.dir_name, name_style, replace_dots)
         if replace_dots and str(c.path) in rename:
             nm = nm.replace(".", "_")
-        if include and nm not in include and c.dir_name not in include:
-            continue
+        if include:
+            if nm not in include and c.dir_name not in include:
+                continue
+            matched.update({nm, c.dir_name} & include)
         if exclude and (nm in exclude or c.dir_name in exclude):
             continue
         if nm in used:
@@ -579,6 +582,10 @@ def load_all(inputs: Sequence[str], sample_sheet: Optional[str] = None,
         used.add(nm)
         jobs.append((c, nm, lin_of.get(str(c.path), lineage)))
 
+    if include and include - matched:
+        miss = sorted(include - matched)
+        warn(f"{len(miss)} name(s) in the sample list not found: {', '.join(miss[:10])}"
+             + (" ..." if len(miss) > 10 else ""))
     if cache_dir is not None:
         cache_dir.mkdir(parents=True, exist_ok=True)
     with ThreadPoolExecutor(max_workers=max(1, threads)) as ex:

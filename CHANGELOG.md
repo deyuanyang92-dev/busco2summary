@@ -1,6 +1,15 @@
 # Changelog
 
 
+## 1.3.0 (2026-10-27)
+
+* new `list` command: names of all BUSCO result folders under `-i`, one per line (`--long`: folder
+  name, layout, runs, path); reads no tables (83 folders in 0.4 s).
+* `--samples FILE` (alias of `--include`) for every command: lines may be sample names, folder names
+  or paths (the `list --long` output works as is); names not found are reported.
+* releases are made locally with `scripts/release.sh` (no GitHub Actions workflow scope needed).
+* README reorganised.
+
 ## 1.2.0 (2026-10-27)
 
 * new `matrix` command: one gene × sample matrix (status / binary / copy number) or a long

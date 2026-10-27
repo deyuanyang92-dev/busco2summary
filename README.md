@@ -28,12 +28,25 @@ python3 b2s.pyz run -i busco_results/ -o b2s_out                      # 全部�
 
 | 命令 | 做什么 | 主要输出 |
 |---|---|---|
+| `list` | 列出目录里所有 BUSCO 结果的名字（一行一个） | 名单文件，可编辑后用 `--samples` 读入 |
 | `matrix` | 只输出一张矩阵，不建目录、不写缓存 | 一个 TSV（屏幕或 `-o` 文件，`.gz` 自动压缩） |
 | `genelists` | 按占有率输出基因 ID 列表 | `gene_lists/S/S_occ090.txt` 等 |
 | `run` | 全部分析 | 汇总表、矩阵、逐基因/逐样品统计、列表、图、HTML 报告 |
 | `extract` | 按基因列表提取序列 | 按基因 / 按样品的 FASTA |
 | `summary` | 只要每个样品的 C/S/D/F/M 汇总 | `busco_summary.tsv` |
 | `scan` | 看文件夹里识别到了什么 | 样品、版本、谱系、状态清单 |
+
+**只处理部分样品**：先列出名单，删掉不要的行，再用 `--samples` 读入（所有命令都支持）：
+
+```bash
+b2s list -i busco_results/ > samples.txt              # 每行一个样品名（--long 另附文件夹名和路径）
+# 编辑 samples.txt，只保留需要的样品
+b2s matrix -i busco_results/ --samples samples.txt > status_matrix.tsv
+b2s run    -i busco_results/ --samples samples.txt -o b2s_out
+```
+
+名单每行可以是样品名、文件夹名或完整路径；`#` 开头的行忽略；名单里找不到的名字会提示。
+反过来，`--exclude 名单` 去掉这些样品。
 
 常用示例：
 
@@ -177,26 +190,36 @@ full_table 每个样品一个文件，明确记录 M；序列文件名拿不到 
 
 ## 与其他软件对比
 
-和 GitHub 上 5 个项目的 6 个脚本跑同一份真实数据，结果与独立脚本从原始文件算出的"真值"逐项比对
+**测试方法**：6 个开源脚本和本工具跑同一份真实数据，结果与一个独立脚本从原始文件算出的"真值"逐项比对
 （基因集合、每条 基因 × 样品 记录的状态、每条序列）。
-D1 = 199 个环节动物基因组（BUSCO 6 miniprot），D2 = 77 个基因组 + 转录组（BUSCO 5.8），metazoa_odb12，672 个 BUSCO。
 
-| 数据 | 集合 | 阈值 | 真值基因数 | **busco2summary** | 旧脚本 v0.3 | [BUSCO_phylogenomics](https://github.com/jamiemcg/BUSCO_phylogenomics) | [busco2fasta](https://github.com/lstevens17/busco2phylo-nf) | [bigey](https://github.com/bigey/BUSCO-phylogenetics-pipeline) | [ZF](https://github.com/xtmtd/Phylogenomics)（S / S+F 两版） |
-|---|---|---|---|---|---|---|---|---|---|
-| D1 | S | 50 % | 660 | ✔ | ✔ | ✔ | ✔ | ✔ | |
-| D1 | SF | 50 % / 90 % | 667 / 4 | ✔ | ✔ | 不支持 F | 不支持 F | 不支持 F | |
-| D1 | S / SF | ≥ 3 类群 | 672 | ✔ | | | | | **0 个基因**（无 `.fna`，静默跳过） |
-| D2 | S | 50 % | 415 | ✔ | ✔ | ✔ | **436（多 21）** | ✔ | |
-| D2 | SF | 50 % / 90 % | 652 / 171 | ✔ | ✔ | | | | |
-| D2 | S / SF | ≥ 3 类群 | 672 | ✔ | | | | | 只用了 32/77 个样品 |
+**数据**：metazoa_odb12（672 个 BUSCO）。
+- D1：199 个环节动物基因组，BUSCO 6 miniprot
+- D2：77 个基因组 + 转录组，BUSCO 5.8
 
-✔ = 基因集合、每条记录状态、每条序列都与真值一致。
+**结果**：
 
-* busco2summary 在全部 12 种设置下与真值一致，用到所有样品。
-* 其他软件按各自规则都正确，差异来自规则：busco2fasta 用 `round(N·p)`，77 个样品时 "50 %" = 38 个样品（⌈N·t⌉ = 39），多选 21 个基因；
-  ZF 只收有 `.fna` 的样品，没有任何提示。
-* 鲁棒性（8 种目录结构混在一个文件夹）：busco2summary 8/8，旧脚本 6/8，MultiQC 5/8，BUSCO_phylogenomics 0/8（崩溃）。
-* 没有任何软件改动输入文件。
+| 工具 | 支持的集合 | 选基因规则 | D1 | D2 |
+|---|---|---|---|---|
+| **busco2summary** | S、SF、SD、SDF | ≥ ⌈t × N⌉ 个样品；≥ K 个类群 | ✔ 全部一致 | ✔ 全部一致 |
+| 旧脚本 busco_2_matrix v0.3 | S、SF | 样品比例 ≥ t | ✔ | ✔ |
+| [BUSCO_phylogenomics](https://github.com/jamiemcg/BUSCO_phylogenomics) | S | 样品比例 ≥ t | ✔ | ✔ |
+| [bigey busco-phylo](https://github.com/bigey/BUSCO-phylogenetics-pipeline) | S | 样品比例 ≥ t | ✔ | ✔ |
+| [busco2fasta](https://github.com/lstevens17/busco2phylo-nf) | S | ≥ round(N × p) 个样品 | ✔ | △ 规则不同：50 % 时多选 21 个基因 |
+| [ZF BUSCO_extraction](https://github.com/xtmtd/Phylogenomics) | S（version2）、SF（主版本） | ≥ 3 个类群，只认有 `.fna` 的样品 | ✘ 0 个基因 | ✘ 只用了 32/77 个样品 |
+
+✔ = 基因集合、每条记录状态、每条序列都与真值一致；△ = 按自己的规则正确，但与常用规则结果不同；✘ = 漏掉样品或基因（D1、D2 各测 S 与 SF、50 % / 90 % / ≥ 3 类群，共 12 种设置）。
+
+**差异原因**：
+- **busco2fasta**：用四舍五入。77 个样品时 "50 %" = round(38.5) = 38 个样品，正确应为 ⌈77 × 0.5⌉ = 39，因此多选 21 个基因。
+- **ZF**：BUSCO 6 miniprot 结果没有 `.fna`，这些样品被跳过，而且没有任何提示。
+- **其他**：按各自规则都正确。所有软件都没有改动输入文件。
+
+**鲁棒性**（8 种不同目录结构混在一个文件夹）：
+
+| busco2summary | 旧脚本 v0.3 | MultiQC | BUSCO_phylogenomics |
+|---|---|---|---|
+| **8/8** | 6/8 | 5/8 | 0/8（崩溃） |
 
 <details>
 <summary>功能对比（据各工具源码）</summary>

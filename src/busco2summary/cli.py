@@ -1,5 +1,6 @@
 """Command line interface.
 
+busco2summary list     -i BUSCO_DIR > s.txt     # names of all result folders (for --samples)
 busco2summary matrix   -i BUSCO_DIR > m.tsv     # one matrix only, no output folder
 busco2summary run      -i BUSCO_DIR -o OUT      # everything (summary, matrices, lists, plots, HTML)
 busco2summary scan     -i BUSCO_DIR -o OUT      # discovery only: what is where
@@ -27,6 +28,8 @@ from .writers import write_list, write_matrix, write_table, write_xlsx
 
 EPILOG = """
 examples:
+  busco2summary list -i busco_results/ > samples.txt          # edit, then:
+  busco2summary matrix -i busco_results/ --samples samples.txt > status_matrix.tsv
   busco2summary matrix -i busco_results/ > status_matrix.tsv
   busco2summary matrix -i busco_results/ --set SF -t 50 --format binary -o SF_occ50.tsv
   busco2summary matrix -i busco_results/ --genes my_ids.txt --format ids > present_ids.tsv
@@ -53,7 +56,13 @@ def _thresholds(vals: List[float]) -> List[float]:
 def _read_set(path: Optional[str]) -> Optional[set]:
     if not path:
         return None
-    return {l.split()[0] for l in Path(path).read_text().splitlines() if l.strip() and not l.startswith("#")}
+    # first column of each line; a path is reduced to its folder name (so `list --long` output
+    # or a list of result folders works as well as plain sample names)
+    out = set()
+    for ln in Path(path).read_text().splitlines():
+        if ln.strip() and not ln.startswith("#"):
+            out.add(Path(ln.split("\t")[0].strip().rstrip("/")).name)
+    return out
 
 
 def add_input_args(p: argparse.ArgumentParser) -> None:
@@ -71,8 +80,10 @@ def add_input_args(p: argparse.ArgumentParser) -> None:
                         "first dot | GCA/GCF/SRR accession")
     g.add_argument("--replace-dots", action="store_true",
                    help="replace '.' in sample names by '_' (busco_2_matrix v0.3 default)")
-    g.add_argument("--include", metavar="FILE", help="only these samples (one per line)")
-    g.add_argument("--exclude", metavar="FILE", help="drop these samples (one per line)")
+    g.add_argument("--include", "--samples", metavar="FILE",
+                   help="only these samples: one name or result folder per line "
+                        "(e.g. edited output of `busco2summary list`)")
+    g.add_argument("--exclude", metavar="FILE", help="drop these samples (same format as --include)")
     g.add_argument("--max-depth", type=int, default=4, help="folder search depth")
     g.add_argument("-j", "--threads", type=int, default=8, help="parallel readers")
     g.add_argument("--no-cache", action="store_true", help="do not use/write the parse cache")
@@ -117,6 +128,15 @@ def build_parser() -> argparse.ArgumentParser:
         add_output_args(sp)
         return sp
 
+    sp = sub.add_parser("list", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                        help="names of all BUSCO result folders (one per line), for --samples",
+                        description="List every BUSCO/compleasm result folder found under -i, one sample "
+                                    "name per line (fast: no table is read). Edit the list and pass it "
+                                    "back with --samples FILE to analyse only those samples.")
+    add_input_args(sp)
+    sp.add_argument("-o", "--output", default="-", help="output file ('-' = stdout)")
+    sp.add_argument("--long", action="store_true",
+                    help="also folder name, layout, lineage run(s) and path (tab-separated)")
     mk("scan", "list discovered BUSCO results (layout, lineage, version, state)")
     sp = mk("summary", "per-sample summary table (counts, percentages, E, assembly stats, QC flags)")
     sp.add_argument("--xlsx", action="store_true", help="also write busco_summary.xlsx")
@@ -411,6 +431,33 @@ def _do_extract(args, ds: analysis.Dataset, genes: List[str], sset: str, out: Pa
     write_list(out / "busco_ids.txt", genes)
 
 
+def cmd_list(args) -> int:
+    from .loader import discover, make_name
+    if not args.input:
+        error("give -i/--input")
+        return 2
+    inc, exc = _read_set(args.include), _read_set(args.exclude)
+    rows = []
+    for c in discover([Path(i) for i in args.input], max_depth=args.max_depth):
+        nm = make_name(c.dir_name, args.name_style, args.replace_dots)
+        if inc and nm not in inc and c.dir_name not in inc:
+            continue
+        if exc and (nm in exc or c.dir_name in exc):
+            continue
+        rows.append((nm, c.dir_name, c.layout, ",".join(r.name for r in c.runs), str(c.path)))
+    fh = sys.stdout if args.output == "-" else open(args.output, "w")
+    try:
+        if args.long:
+            fh.write("#sample\tdir_name\tlayout\truns\tpath\n")
+        for r in rows:
+            fh.write(("\t".join(r) if args.long else r[0]) + "\n")
+    finally:
+        if fh is not sys.stdout:
+            fh.close()
+    info(f"{len(rows)} BUSCO result folders" + ("" if args.output == "-" else f" -> {args.output}"))
+    return 0
+
+
 def cmd_scan(args) -> int:
     samples = _load(args)
     out = Path(args.outdir)
@@ -599,6 +646,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         ap.print_help()
         return 0
     try:
+        if args.cmd == "list":
+            return cmd_list(args)
         if args.cmd == "scan":
             return cmd_scan(args)
         if args.cmd == "summary":
