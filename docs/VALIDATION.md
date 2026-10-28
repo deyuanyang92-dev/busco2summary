@@ -1,4 +1,4 @@
-# Validation (v1.1.0, 2026-10-27)
+# Validation (v0.2.0, 2026-10-27)
 
 What was checked before using busco2summary numbers in a publication, what was found, and what is
 **not** covered. Scripts: `benchmark/validation/`. Issue log: `docs/ISSUES.md`.
@@ -74,7 +74,7 @@ busco2summary:
 
 ## 5. Suggested methods text
 
-> BUSCO results were summarised with busco2summary v1.1.0 (https://github.com/deyuanyang92-dev/busco2summary).
+> BUSCO results were summarised with busco2summary v0.2.0 (https://github.com/deyuanyang92-dev/busco2summary).
 > For each sample, every BUSCO was assigned one status (complete single-copy S, duplicated D,
 > fragmented F, missing M) from the distinct BUSCO IDs in `full_table.tsv`. Samples with
 > no BUSCO [and samples with S+D+F < X %] were excluded. A BUSCO was retained when it was present
@@ -83,6 +83,6 @@ busco2summary:
 
 Chinese version:
 
-> 使用 busco2summary v1.1.0 汇总 BUSCO 结果。每个样品中每个 BUSCO 依据 `full_table.tsv` 中的不同 ID 判定唯一状态
+> 使用 busco2summary v0.2.0 汇总 BUSCO 结果。每个样品中每个 BUSCO 依据 `full_table.tsv` 中的不同 ID 判定唯一状态
 > （完整单拷贝 S、重复 D、片段 F、缺失 M）。剔除无 BUSCO 的样品［及 S+D+F < X % 的样品］后，保留在 N 个样品中
 > 至少 ⌈t × N⌉ 个样品［以 S／以 S 或 F］出现的 BUSCO（t = …），最终矩阵含 … 个位点，填充率 … %。

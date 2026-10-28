@@ -1,7 +1,9 @@
 # Changelog
 
+Versions below 1.0 are development versions (used by the author only); 1.0 will be the first formal release.
 
-## 1.3.0 (2026-10-28)
+
+## 0.4.0 (2026-10-28)
 
 * new `busco` command: run BUSCO on many assemblies and summarise. Finds SPAdes (`contigs.fasta`,
   `--fasta scaffolds.fasta`), rnaSPAdes (`transcripts.fasta`), Trinity (`Trinity.fasta` or
@@ -19,7 +21,7 @@
 * releases are made locally with `scripts/release.sh` (no GitHub Actions workflow scope needed).
 * README reorganised.
 
-## 1.2.0 (2026-10-27)
+## 0.3.0 (2026-10-27)
 
 * new `matrix` command: one gene × sample matrix (status / binary / copy number) or a long
   `sample busco_id status` table, to stdout or a file; occupancy (`-t`), `--min-taxa`,
@@ -32,7 +34,7 @@
 * `b2s ... | head` no longer prints a BrokenPipe traceback.
 * benchmark: gene-matrix cross-validation against 6 scripts from 5 projects (`benchmark/README.md` §4).
 
-## 1.1.0 (2026-10-27)
+## 0.2.0 (2026-10-27)
 Logic audit for use in publications (independent code review + BUSCO source survey + real-data check).
 See `docs/VALIDATION.md` and `docs/ISSUES.md` #19-#30.
 
@@ -53,7 +55,7 @@ Other
 * docs/BUSCO_FORMATS.md: output formats of BUSCO 3.0.2-6.1.0 and compleasm from their source code
 * corrected description of ZF `BUSCO_extraction.sh` (main version uses S+F)
 
-## 1.0.0 (2026-10-26)
+## 0.1.0 (2026-10-26)
 First release of the consolidated package. Replaces and supersedes:
 
 * `busco_2_matrix_v0.3.py` (internal v7.2.0; matrices, Pareto HTML, extraction) - kept in `legacy/`

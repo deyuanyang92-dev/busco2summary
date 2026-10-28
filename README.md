@@ -15,7 +15,7 @@
 只需要 python3，下载一个 46 KB 的文件，不装任何包：
 
 ```bash
-curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/latest/download/b2s.pyz
+curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/download/v0.4.0/b2s.pyz
 
 python3 b2s.pyz matrix -i busco_results/ > status_matrix.tsv          # 基因 × 样品状态矩阵（S/D/F/M）
 python3 b2s.pyz genelists -i busco_results/ -o lists -t 50 70 90      # 50/70/90 % 占有率的基因 ID 列表
@@ -109,7 +109,7 @@ b2s extract -i busco_results/ -o seqs --genes lists/gene_lists/SF/SF_occ090.txt 
 
 | 方式 | 命令 | 适合 |
 |---|---|---|
-| 免安装 | `curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/latest/download/b2s.pyz` | 只想要矩阵 / 列表，不想装任何东西 |
+| 免安装 | `curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/download/v0.4.0/b2s.pyz` | 只想要矩阵 / 列表，不想装任何东西 |
 | pip | `pip install git+https://github.com/deyuanyang92-dev/busco2summary.git` | 想要 `b2s` 命令 |
 | pip + 图和 Excel | `pip install "busco2summary[all] @ git+https://github.com/deyuanyang92-dev/busco2summary.git"` | 要 PNG/PDF 图、`.xlsx` |
 | conda | `git clone …/busco2summary.git && conda env create -f environment.yml` | 在 conda 环境里用 |
@@ -314,7 +314,7 @@ S > D > F > M), not from sequence file names.
 No required dependencies; zero-install single file (Python ≥ 3.8):
 
 ```bash
-curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/latest/download/b2s.pyz
+curl -LO https://github.com/deyuanyang92-dev/busco2summary/releases/download/v0.4.0/b2s.pyz
 python3 b2s.pyz matrix -i busco_results/ > status_matrix.tsv
 python3 b2s.pyz matrix -i busco_results/ --set SF -t 50 --format binary -o SF_occ050.tsv
 python3 b2s.pyz run -i busco_results/ -o b2s_out

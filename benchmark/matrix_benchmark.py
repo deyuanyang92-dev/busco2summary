@@ -58,7 +58,7 @@ SETTINGS = {
     "zf2":   [("S", "min3")],           # scripts/version2/BUSCO_extraction.sh
 }
 NAMES = {
-    "b2s": "busco2summary 1.1.0", "v03": "busco_2_matrix v0.3 (legacy)",
+    "b2s": "busco2summary 0.2.0", "v03": "busco_2_matrix v0.3 (legacy)",
     "bp": "BUSCO_phylogenomics (jamiemcg, bioconda 20240919)",
     "b2f": "busco2fasta.py (lstevens17/busco2phylo-nf)",
     "bigey": "busco-phylo.py (bigey/BUSCO-phylogenetics-pipeline)",

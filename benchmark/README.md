@@ -81,7 +81,7 @@ Alignment / trimming / tree programs are replaced by pass-through stubs, so only
 extraction are timed. Input: D1 = 199 annelid genome runs (192 non-empty, BUSCO 6.0.0 miniprot),
 D2 = 77 runs (BUSCO 5.8.2, metazoa_odb12); 672 BUSCOs.
 
-Tools: busco2summary 1.1.0; busco_2_matrix v0.3 (our legacy script); BUSCO_phylogenomics
+Tools: busco2summary 0.2.0; busco_2_matrix v0.3 (our legacy script); BUSCO_phylogenomics
 (jamiemcg, bioconda 20240919); `busco2fasta.py` (lstevens17/busco2phylo-nf, commit 2308a1c);
 `busco-phylo.py` (bigey/BUSCO-phylogenetics-pipeline, commit eeb3f12); ZF `BUSCO_extraction.sh`
 main and version2 (xtmtd/Phylogenomics, commit 04838a1). Each was run with the status set and

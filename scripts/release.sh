@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Local release (no GitHub Actions, so no 'workflow' token scope needed).
-# Usage: [PRERELEASE=1] scripts/release.sh 1.2.1      -> tests (also without matplotlib/openpyxl), builds dist/b2s.pyz,
+# Versions < 1.0 are development versions (PRERELEASE=1); 1.0 = first formal release.
+# Usage: [PRERELEASE=1] scripts/release.sh 0.4.1      -> tests (also without matplotlib/openpyxl), builds dist/b2s.pyz,
 #                                         tags v1.2.1, pushes, creates the GitHub release with b2s.pyz attached.
 set -euo pipefail
 V=${1:?version, e.g. 1.2.1}
@@ -9,6 +10,7 @@ PY=${PY:-python3}
 $PY -m pytest -q
 $PY scripts/build_pyz.py
 $PY -I dist/b2s.pyz --version | grep -q "$V" || { echo "b2s.pyz version != $V (update __init__.py)"; exit 1; }
+grep -q "releases/download/v$V/b2s.pyz" README.md || { echo "README download links do not point to v$V"; exit 1; }
 git tag -a "v$V" -m "busco2summary $V"
 for i in 1 2 3 4 5; do git push origin main "v$V" && break; sleep 5; done   # VPN proxy sometimes times out
 for i in 1 2 3 4 5; do

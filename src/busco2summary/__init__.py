@@ -5,7 +5,7 @@ first-class signal), occupancy-based gene-ID lists and sequence extraction for
 BUSCO v3-v6 (genome / transcriptome / protein modes) and compleasm outputs.
 """
 
-__version__ = "1.3.0"
+__version__ = "0.4.0"
 
 #: Status codes used everywhere in the package.
 STATUSES = ("S", "D", "F", "M")
