@@ -253,14 +253,21 @@ def run_all(todo: List[Assembly], out: Path, base: List[str], env: Dict[str, str
         return a, rc, f"{time.time() - t0:.0f}s"
 
     results = []
-    with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
-        futs = [ex.submit(one, a) for a in todo]
+    ex = ThreadPoolExecutor(max_workers=max(1, jobs))
+    futs = [ex.submit(one, a) for a in todo]
+    try:
         for k, f in enumerate(as_completed(futs), 1):
             a, rc, dt = f.result()
             (info if rc == 0 else warn)(f"[{k}/{len(todo)}] {a.name}: "
                                         + ("done" if rc == 0 else f"FAILED (exit {rc}), see logs/{a.name}.busco.log")
                                         + f" {dt}")
             results.append((a, rc, dt))
+    except KeyboardInterrupt:              # Ctrl+C: running BUSCOs get SIGINT too; queued ones must not start
+        for f in futs:
+            f.cancel()
+        raise
+    finally:
+        ex.shutdown(wait=True)
     return results
 
 

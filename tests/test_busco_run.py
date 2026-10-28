@@ -109,3 +109,11 @@ def test_run_resume_failures_summary(tmp_path):
           "--busco", str(tmp_path / "bin" / "busco"), "--samples", str(tmp_path / "s.txt"), "-q"])
     last = (tmp_path / "calls.txt").read_text().splitlines()[-1]
     assert "-o 23002-1" in last and last.endswith("-f")      # unfinished folder: start over
+
+
+def test_all_failed_returns_1(tmp_path):
+    _fasta(tmp_path / "a" / "bad.fasta")
+    out = tmp_path / "out"
+    assert main(["busco", "-i", str(tmp_path / "a"), "-o", str(out), "-l", "x",
+                 "--busco", str(_busco(tmp_path)), "-q"]) == 1
+    assert not (out / "busco_summary.tsv").exists() and (out / "busco_failed.tsv").exists()

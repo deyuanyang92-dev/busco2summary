@@ -575,9 +575,10 @@ def cmd_busco(args) -> int:
             warn(f"{len(failed)} BUSCO run(s) failed -> {out / 'busco_failed.tsv'}")
         elif (out / "busco_failed.tsv").exists():
             (out / "busco_failed.tsv").unlink()
-    if not args.no_summary:
+    done = [a.name for a in items if runbusco.is_done(out, a.name)]
+    if not args.no_summary and done:
         names = out / ".busco_samples.txt"
-        names.write_text("".join(a.name + "\n" for a in items if runbusco.is_done(out, a.name)))
+        names.write_text("".join(n + "\n" for n in done))
         rc = main(["summary", "-i", str(out), "-o", str(out), "--samples", str(names), "--max-depth", "2",
                    "--name-style", "dir"]
                   + ["-q"] * args.quiet)
