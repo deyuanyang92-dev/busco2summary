@@ -2,9 +2,9 @@
 # Local release (no GitHub Actions, so no 'workflow' token scope needed).
 # Versions < 1.0 are development versions (PRERELEASE=1); 1.0 = first formal release.
 # Usage: [PRERELEASE=1] scripts/release.sh 0.4.1      -> tests (also without matplotlib/openpyxl), builds dist/b2s.pyz,
-#                                         tags v1.2.1, pushes, creates the GitHub release with b2s.pyz attached.
+#                                         tags v0.4.1, pushes, creates the GitHub release with b2s.pyz attached.
 set -euo pipefail
-V=${1:?version, e.g. 1.2.1}
+V=${1:?version, e.g. 0.4.1}
 cd "$(dirname "$0")/.."
 PY=${PY:-python3}
 $PY -m pytest -q
